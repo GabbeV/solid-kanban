@@ -1,0 +1,373 @@
+import { css } from "@csslit/core";
+import { dynamic, type JSX } from "@solidjs/web";
+import { useNavigate } from "@solidjs/router";
+import { action, createOptimistic, omit } from "solid-js";
+import {
+  colors,
+  radius,
+  buttonPad,
+  buttonText,
+  lineHeight,
+  space,
+} from "#/theme.ts";
+
+export type ButtonVariant =
+  "default" | "primary" | "danger" | "ghost" | "danger-ghost" | "text";
+export type ButtonPad = keyof typeof buttonPad;
+export type ButtonFont = keyof typeof buttonText | "inherit";
+
+type ButtonStyles = {
+  variant?: ButtonVariant;
+  /** Padding on all sides. Defaults to `md` (`text` defaults to `xs`). */
+  pad?: ButtonPad;
+  /** Label type scale. Defaults to `control` (`text` defaults to `inherit`). */
+  font?: ButtonFont;
+  /** Alignment of the button contents. Defaults to centered. */
+  align?: "start" | "center";
+  /** Square single-icon button; box size follows the 9px icon + pad + border. */
+  iconOnly?: boolean;
+  /**
+   * Shift the border-box by −(pad + border) so a backgroundless button’s
+   * glyph sits on the surrounding content edge instead of inside its chrome.
+   */
+  bleed?: boolean;
+};
+
+export type ButtonProps = ButtonStyles &
+  (
+    | (Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "class"> & {
+        href?: undefined;
+      })
+    | (Omit<JSX.AnchorHTMLAttributes<HTMLAnchorElement>, "class" | "href"> & {
+        href: string;
+      })
+  );
+
+export function Button(props: ButtonProps) {
+  const [pending, setPending] = createOptimistic(false);
+  const navigate = props.href === undefined ? undefined : useNavigate();
+  const buttonClick = action(function* (
+    event: Parameters<JSX.EventHandler<HTMLButtonElement, MouseEvent>>[0],
+  ) {
+    if (props.href !== undefined) return;
+    setPending(true);
+    const handler = props.onClick;
+    const result =
+      typeof handler === "function"
+        ? handler(event)
+        : handler?.[0](handler[1], event);
+    const button = event.currentTarget;
+    if (!event.defaultPrevented && button.type === "submit" && button.form) {
+      // Start the native submit (including validation) in the flag's update,
+      // rather than letting the browser's default action start a later update.
+      event.preventDefault();
+      button.form.requestSubmit(button);
+    }
+    yield result;
+  });
+  const anchorClick = action(function* (
+    event: Parameters<JSX.EventHandler<HTMLAnchorElement, MouseEvent>>[0],
+  ) {
+    if (props.href === undefined) return;
+    setPending(true);
+    const handler = props.onClick;
+    const result =
+      typeof handler === "function"
+        ? handler(event)
+        : handler?.[0](handler[1], event);
+    const anchor = event.currentTarget;
+    const url = new URL(anchor.href);
+    if (
+      navigate &&
+      !event.defaultPrevented &&
+      event.button === 0 &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.shiftKey &&
+      !event.altKey &&
+      !anchor.target &&
+      !anchor.hasAttribute("download") &&
+      !anchor.rel.split(/\s+/).includes("external") &&
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      url.origin === window.location.origin
+    ) {
+      // Navigate here: a microtask flush can separate native event listeners.
+      // The flag and navigation must start in the same action slice.
+      event.preventDefault();
+      const state = anchor.getAttribute("state");
+      navigate(url.pathname + url.search + url.hash, {
+        resolve: false,
+        replace: anchor.hasAttribute("replace"),
+        scroll: !anchor.hasAttribute("noscroll"),
+        state: state ? JSON.parse(state) : undefined,
+      });
+    }
+    yield result;
+  });
+  const Element = dynamic(() => (props.href === undefined ? "button" : "a"));
+  const elementProps = () =>
+    props.href === undefined
+      ? {
+          ...omit(
+            props,
+            "variant",
+            "pad",
+            "font",
+            "align",
+            "iconOnly",
+            "bleed",
+            "onClick",
+          ),
+          onClick: buttonClick,
+          type: props.type ?? "button",
+        }
+      : {
+          ...omit(
+            props,
+            "variant",
+            "pad",
+            "font",
+            "align",
+            "iconOnly",
+            "bleed",
+            "onClick",
+          ),
+          onClick: anchorClick,
+        };
+  const variant = () => props.variant ?? "default";
+  const borderless = () =>
+    variant() === "ghost" ||
+    variant() === "danger-ghost" ||
+    variant() === "text";
+  const padKey = (): ButtonPad =>
+    props.pad ?? (variant() === "text" ? "xs" : "md");
+  const fontKey = (): ButtonFont =>
+    props.font ?? (variant() === "text" ? "inherit" : "control");
+
+  return (
+    <Element
+      {...elementProps()}
+      class={[
+        css`
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          gap: ${space.sm}px;
+          border-radius: ${radius.control}px;
+          border: 1px solid ${colors.border};
+          background: ${colors.paper};
+          color: ${colors.ink};
+          font-weight: 550;
+          white-space: nowrap;
+          user-select: none;
+          flex-shrink: 0;
+          min-width: 0;
+          padding: var(--button-padding);
+          --button-border: 1px;
+        `,
+        props.align === "start" &&
+          css`
+            justify-content: flex-start;
+            text-align: left;
+          `,
+        padKey() === "none" &&
+          css`
+            --button-padding: ${buttonPad.none}px;
+          `,
+        padKey() === "xs" &&
+          css`
+            --button-padding: ${buttonPad.xs}px;
+          `,
+        padKey() === "sm" &&
+          css`
+            --button-padding: ${buttonPad.sm}px;
+          `,
+        padKey() === "md" &&
+          css`
+            --button-padding: ${buttonPad.md}px;
+          `,
+        padKey() === "lg" &&
+          css`
+            --button-padding: ${buttonPad.lg}px;
+          `,
+        fontKey() === "caption" &&
+          css`
+            font-size: ${buttonText.caption}px;
+          `,
+        fontKey() === "body" &&
+          css`
+            font-size: ${buttonText.body}px;
+          `,
+        fontKey() === "control" &&
+          css`
+            font-size: ${buttonText.control}px;
+          `,
+        fontKey() === "dialogTitle" &&
+          css`
+            font-size: ${buttonText.dialogTitle}px;
+          `,
+        fontKey() === "inherit" &&
+          css`
+            font: inherit;
+          `,
+        variant() !== "text" &&
+          variant() !== "ghost" &&
+          variant() !== "danger-ghost" &&
+          css`
+            body:not(:has([data-dragging])) &:hover:not(:disabled) {
+              background: ${colors.soft};
+              border-color: ${colors.borderHover};
+            }
+          `,
+        variant() === "primary" &&
+          css`
+            background: ${colors.primary};
+            color: ${colors.paper};
+            border-color: ${colors.primary};
+
+            body:not(:has([data-dragging])) &:hover:not(:disabled) {
+              background: ${colors.primaryHover};
+              border-color: ${colors.primaryHover};
+            }
+          `,
+        variant() === "danger" &&
+          css`
+            color: ${colors.danger};
+          `,
+        variant() === "ghost" &&
+          css`
+            border-color: transparent;
+            background: transparent;
+            color: ${colors.muted};
+
+            &[aria-current="page"] {
+              color: ${colors.ink};
+              background: ${colors.hover};
+              font-weight: 600;
+            }
+
+            body:not(:has([data-dragging])) &:hover:not(:disabled) {
+              color: ${colors.ink};
+              background: ${colors.hover};
+              border-color: transparent;
+            }
+          `,
+        variant() === "danger-ghost" &&
+          css`
+            border-color: transparent;
+            background: transparent;
+            color: ${colors.danger};
+
+            body:not(:has([data-dragging])) &:hover:not(:disabled) {
+              background: ${colors.dangerSurface};
+            }
+          `,
+        variant() === "text" &&
+          css`
+            display: inline;
+            min-height: 0;
+            height: auto;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            color: inherit;
+            font-weight: 650;
+            line-height: ${lineHeight.body}px;
+            white-space: normal;
+            text-decoration: underline;
+            text-align: left;
+            flex-shrink: 1;
+            --button-border: 0px;
+            --button-padding: ${space.xs}px;
+          `,
+        props.iconOnly &&
+          css`
+            width: calc(
+              9px + 2 * (var(--button-padding) + var(--button-border))
+            );
+            height: calc(
+              9px + 2 * (var(--button-padding) + var(--button-border))
+            );
+            display: inline-grid;
+            place-items: center;
+          `,
+        props.bleed &&
+          css`
+            margin: calc(-1 * (var(--button-padding) + var(--button-border)));
+          `,
+        pending() &&
+          borderless() &&
+          css`
+            isolation: isolate;
+            &::after {
+              inset: 0;
+              z-index: -1;
+              padding: 0;
+              mask: none;
+              background: linear-gradient(
+                100deg,
+                ${colors.soft} 40%,
+                ${colors.hover} 50%,
+                ${colors.soft} 60%
+              );
+              background-size: 300% 100%;
+            }
+          `,
+        pending() &&
+          css`
+            &,
+            &:disabled {
+              cursor: progress;
+            }
+            &::after {
+              content: "";
+              position: absolute;
+              border-radius: inherit;
+              pointer-events: none;
+              opacity: 0;
+              animation: button-pending 2.4s linear 150ms infinite;
+            }
+
+            @keyframes button-pending {
+              from {
+                opacity: 1;
+                background-position: 0 0;
+              }
+              to {
+                opacity: 1;
+                background-position: 100% 0;
+              }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+              &::after {
+                animation: none;
+                opacity: 1;
+              }
+            }
+          `,
+        pending() &&
+          !borderless() &&
+          css`
+            &::after {
+              inset: -1px;
+              padding: 1px;
+              background: linear-gradient(
+                100deg,
+                ${colors.border} 46%,
+                ${colors.borderHover} 50%,
+                ${colors.border} 54%
+              );
+              background-size: 300% 100%;
+              mask:
+                linear-gradient(#fff, #fff) content-box,
+                linear-gradient(#fff, #fff);
+              mask-composite: exclude;
+            }
+          `,
+      ]}
+    />
+  );
+}
