@@ -67,13 +67,7 @@ function BoardContents(props: { cardState: CardState }) {
       .filter((card) => !card.archived && card.laneId === laneId && filters.matches(card))
       .sort(compareCards);
 
-  const [drag, setDrag] = createSignal<Drag>();
-  let preview: HTMLDivElement | undefined;
-  let stopPointerListeners: (() => void) | undefined;
-  let suppressClickId: string | undefined;
-  onCleanup(() => stopPointerListeners?.());
-
-  const startMove = (id: string, target: DropPosition) => {
+  const drag = createCardDrag((id, target) => {
     const card = cards.find((item) => item.id === id);
     if (!card) return;
 
@@ -91,7 +85,70 @@ function BoardContents(props: { cardState: CardState }) {
     };
 
     void moveCard(request);
-  };
+  });
+
+  return (
+    <>
+      <div
+        class={css`
+          display: flex;
+          gap: ${space.md}px;
+          align-items: flex-start;
+          min-width: min-content;
+          padding-block: ${space.xs}px ${space.md}px;
+        `}
+      >
+        <For each={boardLanes()} keyed={(lane) => lane.id}>
+          {(lane) => (
+            <Lane
+              lane={lane()}
+              cards={filtered(lane().id)}
+              cardState={props.cardState}
+              drop={drag.active()?.target}
+              drag={drag}
+              commentCount={(id) =>
+                boardComments().filter((comment) => comment.cardId === id).length
+              }
+              hasFilters={filters.hasFilters()}
+              onEdit={() => openDialog(navigate, location, `lane/${lane().id}`)}
+            />
+          )}
+        </For>
+      </div>
+      <Show when={drag.active()}>
+        {(active) => (
+          <div
+            ref={drag.previewRef}
+            inert
+            aria-hidden="true"
+            class={css`
+              position: fixed;
+              z-index: 20;
+              pointer-events: none;
+              box-shadow: 0 8px 24px ${colors.shadowDrag};
+            `}
+            style={{
+              left: `${active().left}px`,
+              top: `${active().top}px`,
+              width: `${active().width}px`,
+            }}
+          >
+            <Show when={cards.find((card) => card.id === active().id)}>
+              {(card) => <Card card={card()} />}
+            </Show>
+          </div>
+        )}
+      </Show>
+    </>
+  );
+}
+
+function createCardDrag(onDrop: (id: string, target: DropPosition) => void) {
+  const [drag, setDrag] = createSignal<Drag>();
+  let preview: HTMLDivElement | undefined;
+  let stopPointerListeners: (() => void) | undefined;
+  let suppressClickId: string | undefined;
+  onCleanup(() => stopPointerListeners?.());
 
   const pointerDown = (event: PointerEvent, id: string) => {
     if (event.pointerType !== "mouse" || event.button !== 0) return;
@@ -165,7 +222,7 @@ function BoardContents(props: { cardState: CardState }) {
       setTimeout(() => {
         if (suppressClickId === id) suppressClickId = undefined;
       }, 0);
-      if (finished.target) startMove(id, finished.target);
+      if (finished.target) onDrop(id, finished.target);
     };
 
     stopPointerListeners = stop;
@@ -183,62 +240,15 @@ function BoardContents(props: { cardState: CardState }) {
     suppressClickId = undefined;
   };
 
-  return (
-    <>
-      <div
-        class={css`
-          display: flex;
-          gap: ${space.md}px;
-          align-items: flex-start;
-          min-width: min-content;
-          padding-block: ${space.xs}px ${space.md}px;
-        `}
-      >
-        <For each={boardLanes()} keyed={(lane) => lane.id}>
-          {(lane) => (
-            <Lane
-              lane={lane()}
-              cards={filtered(lane().id)}
-              cardState={props.cardState}
-              drop={drag()?.target}
-              drag={{ activeId: () => drag()?.id, pointerDown, click }}
-              commentCount={(id) =>
-                boardComments().filter((comment) => comment.cardId === id).length
-              }
-              hasFilters={filters.hasFilters()}
-              onEdit={() => openDialog(navigate, location, `lane/${lane().id}`)}
-            />
-          )}
-        </For>
-      </div>
-      <Show when={drag()}>
-        {(active) => (
-          <div
-            ref={(element) => {
-              preview = element;
-            }}
-            inert
-            aria-hidden="true"
-            class={css`
-              position: fixed;
-              z-index: 20;
-              pointer-events: none;
-              box-shadow: 0 8px 24px ${colors.shadowDrag};
-            `}
-            style={{
-              left: `${active().left}px`,
-              top: `${active().top}px`,
-              width: `${active().width}px`,
-            }}
-          >
-            <Show when={cards.find((card) => card.id === active().id)}>
-              {(card) => <Card card={card()} />}
-            </Show>
-          </div>
-        )}
-      </Show>
-    </>
-  );
+  return {
+    active: drag,
+    activeId: () => drag()?.id,
+    pointerDown,
+    click,
+    previewRef: (element: HTMLDivElement) => {
+      preview = element;
+    },
+  };
 }
 
 function BoardSkeleton() {
