@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { chromium, firefox } from "@playwright/test";
+import assert from "node:assert/strict";
 for (const type of [chromium, firefox]) {
   const browser = await type.launch();
   try {
@@ -19,10 +19,7 @@ for (const type of [chromium, firefox]) {
     await page.getByLabel("Round-trip delay").selectOption("2500");
     await page.getByLabel("Speed variation").selectOption("0.5");
     const initial = await dock.boundingBox();
-    assert.ok(
-      Math.abs(initial.x - 16) < 1 &&
-        Math.abs(initial.y + initial.height - 884) < 1,
-    );
+    assert.ok(Math.abs(initial.x - 16) < 1 && Math.abs(initial.y + initial.height - 884) < 1);
     const handle = await page
       .getByRole("separator", {
         name: "Resize network lab height",
@@ -50,19 +47,14 @@ for (const type of [chromium, firefox]) {
     assert.ok(Math.abs(resized.x + resized.width - 1264) < 1);
     await page.getByRole("link", { name: "Activity", exact: true }).click();
     await page.waitForFunction(() =>
-      document.querySelector(
-        'dialog[aria-label="Network lab"] span[aria-hidden=true]',
-      ),
+      document.querySelector('dialog[aria-label="Network lab"] span[aria-hidden=true]'),
     );
     await page.screenshot({
       path: `/tmp/network-dock-light-${type.name()}.png`,
     });
     await page.getByRole("button", { name: /Network lab/ }).click();
     await page.getByRole("button", { name: /Network lab/ }).click();
-    assert.equal(
-      Math.round((await dock.boundingBox()).width),
-      Math.round(resized.width),
-    );
+    assert.equal(Math.round((await dock.boundingBox()).width), Math.round(resized.width));
     await page.emulateMedia({ colorScheme: "dark" });
     await page.screenshot({
       path: `/tmp/network-dock-dark-${type.name()}.png`,
@@ -73,15 +65,10 @@ for (const type of [chromium, firefox]) {
     });
     const phone = await dock.boundingBox();
     assert.ok(
-      phone.x >= 7 &&
-        phone.x + phone.width <= 353 &&
-        phone.y >= 7 &&
-        phone.y + phone.height <= 733,
+      phone.x >= 7 && phone.x + phone.width <= 353 && phone.y >= 7 && phone.y + phone.height <= 733,
     );
     assert.equal(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth > window.innerWidth,
-      ),
+      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
       false,
     );
     await page.getByLabel("Round-trip delay").selectOption("0");

@@ -1,9 +1,12 @@
+import type { NetworkLab } from "#/network-lab/core.ts";
+
 import { render } from "@solidjs/web";
 import { Loading } from "solid-js";
-import { createNetworkLab, type NetworkLab } from "../../src/network-lab/core";
-import { NetworkPanel } from "../../src/network-lab/NetworkPanel";
-import { readNetworkSettings } from "../../src/network-lab/settings";
-import "../../src/global-style";
+
+import { createNetworkLab } from "#/network-lab/core.ts";
+import { NetworkPanel } from "#/network-lab/NetworkPanel.tsx";
+import { readNetworkSettings } from "#/network-lab/settings.ts";
+import "#/global-style.tsx";
 
 declare global {
   interface Window {
@@ -25,8 +28,7 @@ window.networkLab = lab;
 window.waitForPackets = (count, direction) =>
   new Promise((resolve) => {
     const ready = () =>
-      lab.snapshot().packets.filter((packet) => packet.direction === direction)
-        .length === count;
+      lab.snapshot().packets.filter((packet) => packet.direction === direction).length === count;
     if (ready()) return resolve();
     const stop = lab.subscribe(() => {
       if (ready()) {

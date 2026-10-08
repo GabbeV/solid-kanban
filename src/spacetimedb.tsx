@@ -1,34 +1,23 @@
+import type { DbConnection } from "#/module_bindings/index.ts";
+import type { SubscriptionHandle } from "#/module_bindings/index.ts";
+import type { JSX } from "@solidjs/web";
+import type { Accessor } from "solid-js";
+import type { ColumnBuilder, RowTypedQuery, TableRef } from "spacetimedb";
+
+import { createContext, createMemo, createSignal, onCleanup, until, useContext } from "solid-js";
 import {
-  createContext,
-  createMemo,
-  createSignal,
-  onCleanup,
-  until,
-  useContext,
-  type Accessor,
-} from "solid-js";
-import {
+  BooleanExpr,
   evaluateBooleanExpr,
   getQueryAccessorName,
   getQueryWhereClause,
-  BooleanExpr,
-  type ColumnBuilder,
-  type RowTypedQuery,
-  type TableRef,
 } from "spacetimedb";
-import {
-  DbConnection,
-  reducers as reducerDefinitions,
-  tables,
-  type SubscriptionHandle,
-} from "./module_bindings/index.js";
-import { SyncPromise } from "./primitives/syncpromise";
-import type { JSX } from "@solidjs/web";
+
+import { reducers as reducerDefinitions, tables } from "#/module_bindings/index.ts";
+import { SyncPromise } from "#/primitives/syncpromise.ts";
 
 type AnyQuery = RowTypedQuery<any, any>;
 type AnyTable = TableRef<any> & AnyQuery;
-type QueryRow<Q extends AnyQuery> =
-  Q extends RowTypedQuery<infer Row, any> ? Row : never;
+type QueryRow<Q extends AnyQuery> = Q extends RowTypedQuery<infer Row, any> ? Row : never;
 
 type PrimaryKeyName<T extends AnyTable> = {
   [K in keyof T["columns"] & string]: T["columns"][K] extends ColumnBuilder<
@@ -43,9 +32,7 @@ type PrimaryKeyName<T extends AnyTable> = {
 }[keyof T["columns"] & string];
 
 type PrimaryKeyValue<T extends AnyTable> =
-  PrimaryKeyName<T> extends keyof QueryRow<T>
-    ? QueryRow<T>[PrimaryKeyName<T>]
-    : never;
+  PrimaryKeyName<T> extends keyof QueryRow<T> ? QueryRow<T>[PrimaryKeyName<T>] : never;
 
 type Reducers = {
   [K in keyof DbConnection["reducers"]]: (
@@ -90,12 +77,9 @@ function toDNF(predicate: Predicate, negated = false): Term[][] {
 
 function valueKey(value: Comparison["left"]): string {
   return JSON.stringify(
-    value.type === "column"
-      ? ["column", value.table, value.columnName]
-      : ["literal", value.value],
+    value.type === "column" ? ["column", value.table, value.columnName] : ["literal", value.value],
     // SDK identity/UUID/timestamp/connection literals contain a bigint field.
-    (_key, value) =>
-      typeof value === "bigint" ? ["bigint", String(value)] : value,
+    (_key, value) => (typeof value === "bigint" ? ["bigint", String(value)] : value),
   );
 }
 
@@ -123,28 +107,20 @@ function isContradictory(terms: Term[]): boolean {
     signs.set(key, negated);
 
     if (negated || operator !== "eq") continue;
-    const column =
-      comparison.left.type === "column" ? comparison.left : comparison.right;
-    const literal =
-      comparison.left.type === "literal" ? comparison.left : comparison.right;
+    const column = comparison.left.type === "column" ? comparison.left : comparison.right;
+    const literal = comparison.left.type === "literal" ? comparison.left : comparison.right;
     if (column.type !== "column" || literal.type !== "literal") continue;
     const columnKey = valueKey(column);
     const literalKey = valueKey(literal);
-    if (equalities.has(columnKey) && equalities.get(columnKey) !== literalKey)
-      return true;
+    if (equalities.has(columnKey) && equalities.get(columnKey) !== literalKey) return true;
     equalities.set(columnKey, literalKey);
   }
   return false;
 }
 
-export function isQueryCovered(
-  query: AnyQuery,
-  existing: readonly AnyQuery[],
-): boolean {
+export function isQueryCovered(query: AnyQuery, existing: readonly AnyQuery[]): boolean {
   const table = getQueryAccessorName(query);
-  const matching = existing.filter(
-    (other) => getQueryAccessorName(other) === table,
-  );
+  const matching = existing.filter((other) => getQueryAccessorName(other) === table);
   if (matching.length === 0) return false;
   const predicates = matching.map(getQueryWhereClause);
   if (predicates.some((predicate) => !predicate)) return true;
@@ -175,8 +151,7 @@ function cachedUniqueRows(
   const unique = new Set(
     Object.entries(table.columns)
       .filter(([, column]) => {
-        const metadata = (column as ColumnBuilder<any, any, any>)
-          .columnMetadata;
+        const metadata = (column as ColumnBuilder<any, any, any>).columnMetadata;
         return metadata.isPrimaryKey || metadata.isUnique;
       })
       .map(([name]) => name),
@@ -188,9 +163,9 @@ function cachedUniqueRows(
     if (constraint.constraint === "unique" && constraint.columns.length === 1)
       unique.add(constraint.columns[0]);
   }
-  const cache = session.db.db[
-    getQueryAccessorName(query) as keyof typeof session.db.db
-  ] as { iter(): Iterable<Record<string, any>> };
+  const cache = session.db.db[getQueryAccessorName(query) as keyof typeof session.db.db] as {
+    iter(): Iterable<Record<string, any>>;
+  };
   const rows = Array.from(cache.iter());
   const witnesses: Record<string, any>[] = [];
   for (const branch of toDNF(where.data)) {
@@ -198,19 +173,11 @@ function cachedUniqueRows(
     let witness: Record<string, any> | undefined;
     for (const { comparison, negated } of branch) {
       if (negated || comparison.type !== "eq") continue;
-      const column =
-        comparison.left.type === "column" ? comparison.left : comparison.right;
-      const literal =
-        comparison.left.type === "literal" ? comparison.left : comparison.right;
-      if (
-        column.type !== "column" ||
-        literal.type !== "literal" ||
-        !unique.has(column.column)
-      )
+      const column = comparison.left.type === "column" ? comparison.left : comparison.right;
+      const literal = comparison.left.type === "literal" ? comparison.left : comparison.right;
+      if (column.type !== "column" || literal.type !== "literal" || !unique.has(column.column))
         continue;
-      witness = rows.find((row) =>
-        evaluateBooleanExpr(new BooleanExpr(comparison), row),
-      );
+      witness = rows.find((row) => evaluateBooleanExpr(new BooleanExpr(comparison), row));
       if (witness) break;
     }
     if (!witness) return;
@@ -231,10 +198,7 @@ function retainSubscription(
   const single = applied.find((entry) => isQueryCovered(query, [entry.query]));
   let covering = single
     ? [single]
-    : applied.filter(
-        (entry) =>
-          getQueryAccessorName(entry.query) === getQueryAccessorName(query),
-      );
+    : applied.filter((entry) => getQueryAccessorName(entry.query) === getQueryAccessorName(query));
   const covered = isQueryCovered(
     query,
     covering.map((entry) => entry.query),
@@ -286,8 +250,7 @@ function retainSubscription(
     if (witnesses) {
       const suppliers = witnesses.map((row) =>
         applied.find((entry) => {
-          if (getQueryAccessorName(entry.query) !== getQueryAccessorName(query))
-            return false;
+          if (getQueryAccessorName(entry.query) !== getQueryAccessorName(query)) return false;
           const where = getQueryWhereClause(entry.query);
           return !where || evaluateBooleanExpr(where, row);
         }),
@@ -307,8 +270,7 @@ function retainSubscription(
     for (const entry of entries) {
       if (!entry.readers.delete(onError) || entry.readers.size !== 0) continue;
       session.subscriptions.delete(entry);
-      if (session.db.isActive && entry.handle?.isActive())
-        entry.handle.unsubscribe();
+      if (session.db.isActive && entry.handle?.isActive()) entry.handle.unsubscribe();
     }
   };
   // A cached unique match proves the initial snapshot, not ongoing coverage.
@@ -319,9 +281,7 @@ function retainSubscription(
       () => releaseEntries(borrowed),
     );
   // Union coverage only uses applied entries; all their readiness is settled.
-  const ready = snapshotKnown
-    ? SyncPromise.resolve(undefined)
-    : covering[0].ready;
+  const ready = snapshotKnown ? SyncPromise.resolve(undefined) : covering[0].ready;
   let released = false;
   return {
     ready,
@@ -345,26 +305,19 @@ function createSession(
   db: DbConnection,
   disconnected: Promise<Error | undefined>,
 ): ConnectionSession {
-  const pending = new Map<
-    bigint,
-    { confirmed(): void; reject(error: unknown): void }
-  >();
+  const pending = new Map<bigint, { confirmed(): void; reject(error: unknown): void }>();
   let sequence = 0n;
   let disconnectError: Error | undefined;
   const acknowledgmentsReady = Promise.withResolvers<void>();
   // A subscription can fail before any reducer call starts waiting for it.
   void acknowledgmentsReady.promise.catch(() => {});
-  const onAcknowledgment: Parameters<typeof db.db.reducerAck.onInsert>[0] = (
-    _ctx,
-    event,
-  ) => pending.get(event.sequence)?.confirmed();
+  const onAcknowledgment: Parameters<typeof db.db.reducerAck.onInsert>[0] = (_ctx, event) =>
+    pending.get(event.sequence)?.confirmed();
   db.db.reducerAck.onInsert(onAcknowledgment);
   db.subscriptionBuilder()
     .onApplied(() => acknowledgmentsReady.resolve())
     .onError((ctx) => acknowledgmentsReady.reject(ctx.event))
-    .subscribe(
-      tables.reducerAck.where((row) => row.connectionId.eq(db.connectionId)),
-    );
+    .subscribe(tables.reducerAck.where((row) => row.connectionId.eq(db.connectionId)));
 
   void disconnected.then((cause) => {
     disconnectError = new Error(
@@ -385,9 +338,7 @@ function createSession(
       (args: object, confirmed: () => void) =>
         new Promise<void>((resolve, reject) => {
           if (disconnectError || !db.isActive) {
-            reject(
-              disconnectError ?? new Error("SpacetimeDB is disconnected."),
-            );
+            reject(disconnectError ?? new Error("SpacetimeDB is disconnected."));
             return;
           }
 
@@ -400,12 +351,13 @@ function createSession(
           void acknowledgmentsReady.promise.then(() => {
             if (!pending.has(callSequence)) return;
             try {
-              Reflect.apply(reducer, db.reducers, [
-                { ...args, sequence: callSequence },
-              ]).then(() => {
-                pending.delete(callSequence);
-                resolve();
-              }, fail);
+              Reflect.apply(reducer, db.reducers, [{ ...args, sequence: callSequence }]).then(
+                () => {
+                  pending.delete(callSequence);
+                  resolve();
+                },
+                fail,
+              );
             } catch (error) {
               fail(error);
             }
@@ -417,28 +369,20 @@ function createSession(
   return { db, reducers, subscriptions: new Set() };
 }
 
-function getPrimaryKey(
-  table: TableRef<any>,
-): [string, ColumnBuilder<any, any, any>] | undefined {
+function getPrimaryKey(table: TableRef<any>): [string, ColumnBuilder<any, any, any>] | undefined {
   return Object.entries(table.columns).find(
-    ([, column]) =>
-      (column as ColumnBuilder<any, any, any>).columnMetadata.isPrimaryKey,
+    ([, column]) => (column as ColumnBuilder<any, any, any>).columnMetadata.isPrimaryKey,
   ) as [string, ColumnBuilder<any, any, any>] | undefined;
 }
 
-function readRows<Q extends AnyQuery>(
-  connection: DbConnection,
-  query: Q,
-): readonly QueryRow<Q>[] {
-  const table = connection.db[
-    getQueryAccessorName(query) as keyof typeof connection.db
-  ] as { iter(): Iterable<QueryRow<Q>> };
+function readRows<Q extends AnyQuery>(connection: DbConnection, query: Q): readonly QueryRow<Q>[] {
+  const table = connection.db[getQueryAccessorName(query) as keyof typeof connection.db] as {
+    iter(): Iterable<QueryRow<Q>>;
+  };
   const where = getQueryWhereClause(query);
   const rows = Array.from(table.iter());
   return where
-    ? rows.filter((row) =>
-        evaluateBooleanExpr(where, row as Record<string, any>),
-      )
+    ? rows.filter((row) => evaluateBooleanExpr(where, row as Record<string, any>))
     : rows;
 }
 
@@ -489,20 +433,14 @@ export function SpacetimeDBProvider(props: {
       .onConnectError((_ctx, error) => waiting.reject(error))
       .onDisconnect((_ctx, error) => {
         lost.resolve(error);
-        waiting.reject(
-          error ?? new Error("SpacetimeDB disconnected while connecting."),
-        );
+        waiting.reject(error ?? new Error("SpacetimeDB disconnected while connecting."));
       });
     attempt = builder.build();
     onCleanup(() => {
       lost.resolve(undefined);
       attempt?.disconnect();
     });
-    return (
-      <SpacetimeDBContext value={connection}>
-        {props.children}
-      </SpacetimeDBContext>
-    );
+    return <SpacetimeDBContext value={connection}>{props.children}</SpacetimeDBContext>;
   }
 
   let attempt: DbConnection | undefined;
@@ -568,9 +506,7 @@ export function SpacetimeDBProvider(props: {
     attempt?.disconnect();
   });
 
-  return (
-    <SpacetimeDBContext value={connection}>{props.children}</SpacetimeDBContext>
-  );
+  return <SpacetimeDBContext value={connection}>{props.children}</SpacetimeDBContext>;
 }
 
 export function useSpacetimeDB() {
@@ -591,12 +527,8 @@ export function useReducers(): Reducers {
         // The synchronous event callback joins its cache delivery to that action.
         const confirmed = until(acknowledged, { signal: abort.signal });
         const completed = connection.ready().then((session) => {
-          const reducer =
-            session.reducers[name as keyof typeof session.reducers];
-          return Reflect.apply(reducer, session.reducers, [
-            args,
-            () => setAcknowledged(true),
-          ]);
+          const reducer = session.reducers[name as keyof typeof session.reducers];
+          return Reflect.apply(reducer, session.reducers, [args, () => setAcknowledged(true)]);
         });
         return Promise.all([confirmed, completed])
           .then(() => {})
@@ -606,9 +538,7 @@ export function useReducers(): Reducers {
   ) as Reducers;
 }
 
-export function useTable<Q extends AnyQuery>(
-  query: () => Q,
-): Accessor<readonly QueryRow<Q>[]> {
+export function useTable<Q extends AnyQuery>(query: () => Q): Accessor<readonly QueryRow<Q>[]> {
   const connection = useSpacetimeDB();
   const source = createMemo(() => {
     const current = query();
@@ -616,8 +546,7 @@ export function useTable<Q extends AnyQuery>(
       throw new Error("useTable does not support semijoin queries");
     }
 
-    if (import.meta.env.SSR)
-      return () => serverRows(connection.ready(), current);
+    if (import.meta.env.SSR) return () => serverRows(connection.ready(), current);
 
     const [rows, setRows] = createSignal<readonly QueryRow<Q>[] | Error>();
     // Resolve the first snapshot in the subscription callback's update.
@@ -633,10 +562,7 @@ export function useTable<Q extends AnyQuery>(
 
       const fail = (cause: unknown) => {
         if (disposed || !active) return;
-        const error =
-          cause instanceof Error
-            ? cause
-            : new Error("SpacetimeDB subscription failed");
+        const error = cause instanceof Error ? cause : new Error("SpacetimeDB subscription failed");
         setRows(error);
         if (!initialized) first.reject(error);
         detach();
@@ -648,9 +574,7 @@ export function useTable<Q extends AnyQuery>(
         .then((session) => {
           if (disposed || !active) return;
           const db = session.db;
-          const table = db.db[
-            getQueryAccessorName(current) as keyof typeof db.db
-          ] as {
+          const table = db.db[getQueryAccessorName(current) as keyof typeof db.db] as {
             onInsert(callback: () => void): void;
             onDelete(callback: () => void): void;
             onUpdate(callback: () => void): void;
@@ -724,13 +648,10 @@ export function useRow<T extends AnyTable>(
   const rows = useTable(() => {
     const current = table();
     const key = getPrimaryKey(current);
-    if (!key)
-      throw new Error(`Table ${current.accessorName} has no primary key`);
+    if (!key) throw new Error(`Table ${current.accessorName} has no primary key`);
     const [columnName] = key;
     const value = primaryKey();
-    return (current as any).where((row: any) =>
-      row[columnName].eq(value),
-    ) as AnyQuery;
+    return (current as any).where((row: any) => row[columnName].eq(value)) as AnyQuery;
   });
   return createMemo(() => rows()[0] as QueryRow<T> | undefined);
 }

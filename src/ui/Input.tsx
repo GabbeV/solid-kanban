@@ -1,7 +1,9 @@
-import { css } from "@csslit/core";
 import type { JSX } from "@solidjs/web";
+
+import { css } from "@csslit/core";
 import { omit } from "solid-js";
-import { colors, radius, control, space } from "#/theme.ts";
+
+import { colors, control, radius, space } from "#/theme.ts";
 import { Icon } from "#/ui/Icon.tsx";
 
 export function Input(

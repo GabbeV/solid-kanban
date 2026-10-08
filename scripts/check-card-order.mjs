@@ -1,16 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import {
-  cardPosition,
-  compareCards,
-  placementKey,
-} from "../src/board/cards.ts";
-import {
-  keyBetween,
-  orderDigits,
-  positionKey,
-  validOrderKey,
-} from "../src/primitives/ordered-key.ts";
+
+import { cardPosition, compareCards, placementKey } from "#/board/cards.ts";
+import { keyBetween, orderDigits, positionKey, validOrderKey } from "#/primitives/ordered-key.ts";
 
 const uuid = (text) => {
   const hex = createHash("sha256").update(text).digest("hex").slice(0, 32);
@@ -31,12 +23,11 @@ const card = (id, orderKey, laneId = "lane") => ({
 });
 
 assert.equal(orderDigits.length, 64);
-assert.equal([...orderDigits].sort().join(""), orderDigits);
+assert.equal(orderDigits.split("").toSorted().join(""), orderDigits);
 assert.equal(new Set(orderDigits).size, 64);
 for (const key of ["0", "V", "z", "--0", "V-0", "00000000000000018"])
   assert(validOrderKey(key), key);
-for (const key of ["", "-", "V-", "a/b", "+", "=", "é", "0\n"])
-  assert(!validOrderKey(key), key);
+for (const key of ["", "-", "V-", "a/b", "+", "=", "é", "0\n"]) assert(!validOrderKey(key), key);
 for (const [left, right] of [
   ["-", "V"],
   ["V", "V"],
@@ -63,8 +54,7 @@ assert.equal(new Set(suffixes).size, ids.length);
 for (const suffix of suffixes) assert(validOrderKey(suffix));
 for (let i = 0; i < ids.length; i++)
   for (let j = 0; j < ids.length; j++)
-    if (i !== j)
-      assert(!suffixes[i].endsWith(suffixes[j]), "ID suffixes cannot alias");
+    if (i !== j) assert(!suffixes[i].endsWith(suffixes[j]), "ID suffixes cannot alias");
 
 // Two independent requests choose the same prefix. A later request can still
 // insert strictly between them, without changing either card's prefix.
@@ -93,17 +83,12 @@ assert.equal(
   keyBetween(undefined, cardPosition(b)),
   "Placement excludes the moved card and archived cards",
 );
-assert.throws(
-  () => placementKey([a], x.id, "lane", "missing"),
-  /destination changed/,
-);
+assert.throws(() => placementKey([a], x.id, "lane", "missing"), /destination changed/);
 
 // Every generated prefix must leave room for every possible ID suffix, even
 // when one complete position is a prefix of the other.
 const prefixes = ["0", "V", "VV", "V0", "V-0", "z", "z-0", "--0"];
-const positions = prefixes
-  .flatMap((key) => ids.map((id) => positionKey(key, id)))
-  .sort();
+const positions = prefixes.flatMap((key) => ids.map((id) => positionKey(key, id))).sort();
 assert.equal(new Set(positions).size, positions.length);
 let intervals = 0;
 for (let i = 0; i < positions.length; i++) {
@@ -169,8 +154,7 @@ for (let run = 0; run < 100; run++) {
     const others = rows.filter((row) => row.id !== id);
     const index = random(others.length + 1);
     const left = index ? cardPosition(others[index - 1]) : undefined;
-    const right =
-      index < others.length ? cardPosition(others[index]) : undefined;
+    const right = index < others.length ? cardPosition(others[index]) : undefined;
     client.pending.push({
       id,
       left,
@@ -198,10 +182,7 @@ for (let run = 0; run < 100; run++) {
       if (request.left !== undefined) assert(request.left < position);
       if (request.right !== undefined) assert(position < request.right);
       for (const witness of stable) {
-        assert.equal(
-          server.findIndex((row) => row.id === witness.id) < index,
-          witness.before,
-        );
+        assert.equal(server.findIndex((row) => row.id === witness.id) < index, witness.before);
         checks++;
       }
     }
@@ -216,12 +197,9 @@ for (let run = 0; run < 100; run++) {
     if (!reply) return;
     client.source = reply.rows;
     if (reply.ack !== undefined)
-      client.pending = client.pending.filter(
-        (request) => request.serial !== reply.ack,
-      );
+      client.pending = client.pending.filter((request) => request.serial !== reply.ack);
     const rows = view(client);
-    for (let i = 1; i < rows.length; i++)
-      assert(compareCards(rows[i - 1], rows[i]) < 0);
+    for (let i = 1; i < rows.length; i++) assert(compareCards(rows[i - 1], rows[i]) < 0);
   };
   for (let step = 0; step < 3000; step++) {
     const client = clients[random(clients.length)];
@@ -230,9 +208,7 @@ for (let run = 0; run < 100; run++) {
     else if (choice === 2) process(client);
     else deliver(client);
   }
-  while (
-    clients.some((client) => client.pending.length || client.replies.length)
-  )
+  while (clients.some((client) => client.pending.length || client.replies.length))
     for (const client of clients) {
       process(client);
       deliver(client);

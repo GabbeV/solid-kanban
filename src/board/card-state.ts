@@ -1,13 +1,15 @@
+import type * as db from "#/module_bindings/types.ts";
+
+import { useParams } from "@solidjs/router";
 import { action, createOptimisticStore, createStore } from "solid-js";
 import { SenderError } from "spacetimedb";
-import { useParams } from "@solidjs/router";
+
+import { duplicateCardError } from "#/board/cards.ts";
 import { tables } from "#/module_bindings/index.ts";
-import type { Card } from "#/module_bindings/types.ts";
 import { useName } from "#/name.tsx";
-import { duplicateCardError } from "./cards";
 import { useReducers, useTable } from "#/spacetimedb.tsx";
 
-export type ViewCard = Card & {
+export type ViewCard = db.Card & {
   moving?: boolean;
   saving?: boolean;
   moveFailed?: boolean;
@@ -50,9 +52,7 @@ export function createCardState(archived = false) {
   const reducers = useReducers();
   const { name } = useName();
   const serverCards = useTable(() =>
-    tables.card.where((card) =>
-      card.boardId.eq(boardId()).and(card.archived.eq(archived)),
-    ),
+    tables.card.where((card) => card.boardId.eq(boardId()).and(card.archived.eq(archived))),
   );
   // Keep reconciliation until the imperative setter follow-up in
   // https://github.com/solidjs/solid/issues/3743#issuecomment-5942237945 is fixed:
@@ -64,8 +64,7 @@ export function createCardState(archived = false) {
         const previous = draft.find((card) => card.id === remote.id);
         const moveFailed =
           previous?.moveFailed === true &&
-          (previous.laneId !== remote.laneId ||
-            previous.orderKey !== remote.orderKey);
+          (previous.laneId !== remote.laneId || previous.orderKey !== remote.orderKey);
         return {
           ...remote,
           // Existence confirms creation. Edit/move failures own unsaved values.
@@ -178,7 +177,7 @@ export function createCardState(archived = false) {
     }
   });
 
-  const createCard = action(function* (input: Card) {
+  const createCard = action(function* (input: db.Card) {
     const card = { ...input };
     setOptimisticCards((draft) => {
       draft.push({ ...card, saving: true });
@@ -195,10 +194,7 @@ export function createCardState(archived = false) {
     }
   });
 
-  const retryCreateCard = action(function* (
-    input: ViewCard,
-    clearErrors = false,
-  ) {
+  const retryCreateCard = action(function* (input: ViewCard, clearErrors = false) {
     const card = { ...input, moving: false, saving: false };
     // A full save includes placement, so it supersedes a separate move retry.
     const retryEdit = clearErrors || card.editFailed === true;
@@ -231,9 +227,7 @@ export function createCardState(archived = false) {
     try {
       yield creation;
     } catch (error) {
-      if (!(
-        error instanceof SenderError && error.message === duplicateCardError
-      )) {
+      if (!(error instanceof SenderError && error.message === duplicateCardError)) {
         setLocalCards((draft) => {
           const previous = draft.find((item) => item.id === card.id);
           if (previous) previous.createFailed = true;
@@ -295,9 +289,7 @@ export function createCardState(archived = false) {
 
   const dismissError = (
     id: string,
-    failure:
-      | Exclude<CardFailure, "createFailed" | "editFailed" | "moveFailed">
-      | "changes",
+    failure: Exclude<CardFailure, "createFailed" | "editFailed" | "moveFailed"> | "changes",
   ) => {
     const remote = serverCards().find((card) => card.id === id);
     setLocalCards((draft) => {

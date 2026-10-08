@@ -1,11 +1,10 @@
-import { existsSync, mkdirSync } from "node:fs";
 import { spawn } from "node:child_process";
+import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const local = resolve(root, ".tools/spacetime/spacetimedb-cli");
-const executable =
-  process.env.SPACETIME_BIN ?? (existsSync(local) ? local : "spacetime");
+const executable = process.env.SPACETIME_BIN ?? (existsSync(local) ? local : "spacetime");
 const tasks = {
   start: [
     "start",

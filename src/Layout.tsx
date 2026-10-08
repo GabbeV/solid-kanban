@@ -1,7 +1,9 @@
-import { css } from "@csslit/core";
 import type { ParentProps } from "solid-js";
-import { breakpoints } from "./theme";
-import { Sidebar } from "./Sidebar";
+
+import { css } from "@csslit/core";
+
+import { Sidebar } from "#/Sidebar.tsx";
+import { breakpoints } from "#/theme.ts";
 
 export function Layout(props: ParentProps) {
   return (

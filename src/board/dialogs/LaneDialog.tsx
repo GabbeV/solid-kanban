@@ -1,26 +1,22 @@
+import type * as db from "#/module_bindings/types.ts";
+
 import { css } from "@csslit/core";
 import { Show, action, createSignal, untrack } from "solid-js";
-import type { Lane } from "../../module_bindings/types";
+
+import { useName } from "#/name.tsx";
+import { useReducers } from "#/spacetimedb.tsx";
 import { space } from "#/theme.ts";
 import { Button } from "#/ui/Button.tsx";
-import { Icon } from "#/ui/Icon.tsx";
 import { Dialog } from "#/ui/Dialog.tsx";
 import { Field } from "#/ui/Field.tsx";
+import { Icon } from "#/ui/Icon.tsx";
 import { Input } from "#/ui/Input.tsx";
 import { Notice } from "#/ui/Notice.tsx";
-import { useReducers } from "#/spacetimedb.tsx";
-import { useName } from "#/name.tsx";
 
-export function LaneDialog(props: {
-  lane?: Lane;
-  boardId: string;
-  onClose: () => void;
-}) {
+export function LaneDialog(props: { lane?: db.Lane; boardId: string; onClose: () => void }) {
   const reducers = useReducers();
   const { name } = useName();
-  const [title, setTitle] = createSignal(
-    untrack(() => props.lane?.title ?? ""),
-  );
+  const [title, setTitle] = createSignal(untrack(() => props.lane?.title ?? ""));
   const [error, setError] = createSignal<string>();
   const [deleteError, setDeleteError] = createSignal<string>();
   const deleteLane = action(function* () {
@@ -44,12 +40,12 @@ export function LaneDialog(props: {
     currentTarget: HTMLFormElement;
   }) {
     event.preventDefault();
-    const title = String(new FormData(event.currentTarget).get("title"));
+    const title = new FormData(event.currentTarget).get("title");
     newId ??= crypto.randomUUID();
     const request = {
       id: newId,
       boardId: props.boardId,
-      title,
+      title: typeof title === "string" ? title : "",
       actor: name(),
     };
     try {
@@ -66,12 +62,12 @@ export function LaneDialog(props: {
   }) {
     event.preventDefault();
     if (!props.lane) return;
-    const title = String(new FormData(event.currentTarget).get("title"));
+    const title = new FormData(event.currentTarget).get("title");
     try {
       yield reducers.renameLane({
         id: props.lane.id,
         boardId: props.boardId,
-        title,
+        title: typeof title === "string" ? title : "",
         actor: name(),
       });
       setError(undefined);
@@ -81,10 +77,7 @@ export function LaneDialog(props: {
     }
   });
   return (
-    <Dialog
-      title={props.lane ? "Edit lane" : "Add lane"}
-      onClose={() => props.onClose()}
-    >
+    <Dialog title={props.lane ? "Edit lane" : "Add lane"} onClose={() => props.onClose()}>
       <form
         onSubmit={props.lane ? renameLane : addLane}
         class={css`

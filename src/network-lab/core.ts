@@ -1,7 +1,6 @@
-import {
-  WebSocketInterceptor,
-  type WebSocketData,
-} from "@mswjs/interceptors/WebSocket";
+import type { WebSocketData } from "@mswjs/interceptors/WebSocket";
+
+import { WebSocketInterceptor } from "@mswjs/interceptors/WebSocket";
 
 export type NetworkDirection = "out" | "in";
 export type NetworkRow = {
@@ -53,11 +52,7 @@ function snapshotFrame(data: WebSocketData): WebSocketData {
   // Uint8Array writer, so queued frames must own their bytes before we wait.
   if (data instanceof ArrayBuffer) return data.slice(0);
   if (ArrayBuffer.isView(data)) {
-    return new Uint8Array(
-      data.buffer,
-      data.byteOffset,
-      data.byteLength,
-    ).slice();
+    return new Uint8Array(data.buffer, data.byteOffset, data.byteLength).slice();
   }
   return data;
 }
@@ -83,9 +78,7 @@ export function createNetworkLab(options: {
 
   const notify = () => listeners.forEach((listener) => listener());
   const disconnectError = () =>
-    new Error(
-      "Network lab testing error: kept disconnected until reconnected in the lab.",
-    );
+    new Error("Network lab testing error: kept disconnected until reconnected in the lab.");
   const closeConnections = (error: Error) => {
     // Snapshot: close events can remove their connection from the set.
     for (const kill of Array.from(connections)) kill(error);
@@ -138,8 +131,7 @@ export function createNetworkLab(options: {
               (channel.speed - channel.targetSpeed) * 400 * (1 - decay)) /
             (delayMs / 2);
         }
-        channel.speed =
-          channel.targetSpeed + (channel.speed - channel.targetSpeed) * decay;
+        channel.speed = channel.targetSpeed + (channel.speed - channel.targetSpeed) * decay;
         channel.updatedAt = end;
         if (end === channel.nextChangeAt) {
           channel.targetSpeed = jitter === 0 ? 1 : sampleSpeed();
@@ -150,9 +142,7 @@ export function createNetworkLab(options: {
     const arrived: Journey[] = [];
     journeys = journeys.filter((journey) => {
       const progress =
-        delayMs === 0
-          ? 1
-          : Math.min(1, journey.channel.distance - journey.startDistance);
+        delayMs === 0 ? 1 : Math.min(1, journey.channel.distance - journey.startDistance);
       journey.packet = { ...journey.packet, progress };
       if (progress < 1) return true;
       journey.signal.removeEventListener("abort", journey.abort);
@@ -198,15 +188,12 @@ export function createNetworkLab(options: {
         resolve: () => {
           // Two HTTP legs together fail with probability p: (1 - q)^2 = 1 - p.
           // WS has no request/response pairing, so use p / 2 per message.
-          const messageFaultRate =
-            kind === "http" ? 1 - Math.sqrt(1 - faultRate) : faultRate / 2;
+          const messageFaultRate = kind === "http" ? 1 - Math.sqrt(1 - faultRate) : faultRate / 2;
           // Check cancellation again: another arrival may have killed this
           // connection after advance removed this journey from its queue.
           if (signal.aborted) reject(signal.reason);
           else if (messageFaultRate > 0 && Math.random() < messageFaultRate) {
-            const error = new Error(
-              "Network lab testing error: simulated connection fault.",
-            );
+            const error = new Error("Network lab testing error: simulated connection fault.");
             kill(error);
             reject(error);
           } else resolve();
@@ -251,11 +238,7 @@ export function createNetworkLab(options: {
       finishRow(rowId, "done");
       return response;
     } catch (error) {
-      finishRow(
-        rowId,
-        "error",
-        error instanceof Error ? error.message : String(error),
-      );
+      finishRow(rowId, "error", error instanceof Error ? error.message : String(error));
       throw error;
     } finally {
       connections.delete(kill);
@@ -289,9 +272,7 @@ export function createNetworkLab(options: {
       if (closed) return;
       closed = true;
       connections.delete(kill);
-      controller.abort(
-        error ?? new DOMException("Connection closed", "AbortError"),
-      );
+      controller.abort(error ?? new DOMException("Connection closed", "AbortError"));
       finishRow(outgoingId, error ? "error" : "done", error?.message);
       finishRow(incomingId, error ? "error" : "done", error?.message);
     };
@@ -314,17 +295,9 @@ export function createNetworkLab(options: {
     client.addEventListener("message", (event) => {
       const frame = snapshotFrame(event.data);
       event.preventDefault();
-      void travel(
-        outgoingId,
-        "out",
-        "websocket",
-        outbound,
-        controller.signal,
-        kill,
-      ).then(
+      void travel(outgoingId, "out", "websocket", outbound, controller.signal, kill).then(
         () => {
-          if (!closed && server.readyState === WebSocket.OPEN)
-            server.send(frame);
+          if (!closed && server.readyState === WebSocket.OPEN) server.send(frame);
         },
         () => {}, // Faults, closing, and disposal cancel queued traffic.
       );
@@ -332,14 +305,7 @@ export function createNetworkLab(options: {
     server.addEventListener("message", (event) => {
       const frame = snapshotFrame(event.data);
       event.preventDefault();
-      void travel(
-        incomingId,
-        "in",
-        "websocket",
-        inbound,
-        controller.signal,
-        kill,
-      ).then(
+      void travel(incomingId, "in", "websocket", inbound, controller.signal, kill).then(
         () => {
           if (!closed) client.send(frame);
         },
@@ -369,9 +335,7 @@ export function createNetworkLab(options: {
       return () => listeners.delete(listener);
     },
     killConnections() {
-      closeConnections(
-        new Error("Network lab testing error: connections killed manually."),
-      );
+      closeConnections(new Error("Network lab testing error: connections killed manually."));
     },
     setDisconnected(next: boolean) {
       if (disconnected === next) return;
@@ -386,9 +350,7 @@ export function createNetworkLab(options: {
       if (next.faultRate !== undefined) faultRate = next.faultRate;
       if (next.jitter !== undefined) {
         jitter = next.jitter;
-        for (const channel of new Set(
-          journeys.map((journey) => journey.channel),
-        )) {
+        for (const channel of new Set(journeys.map((journey) => journey.channel))) {
           channel.targetSpeed = jitter === 0 ? 1 : sampleSpeed();
           if (jitter === 0) channel.speed = 1;
           channel.nextChangeAt = now + 1000;

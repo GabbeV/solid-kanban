@@ -5,25 +5,26 @@ Boards, lanes, cards, comments, and activity load from SpacetimeDB. You can crea
 ## Stack
 
 - Solid `2.0.0-rc.14`, native compiler `2.0.0-rc.14`, Vite Start mode, and router `2.0.0-next.26`
-- TypeScript/TSX, Vite 8, and csslit 0.0.13
+- TypeScript/TSX, Vite Plus 1.1.0, and csslit 0.0.13
 - SpacetimeDB 2.10.1 with generated bindings in `src/module_bindings/`
 
 Styles are colocated in each owning element's csslit class attribute; shared values live in `src/theme.ts`. No UI component or drag-and-drop library is used.
 
 ## Run locally
 
-Use Node 24 and pnpm 10.32.1.
+Use Node 24 and the Vite Plus CLI (`vp`). The project uses pnpm 10.32.1 through
+Vite Plus.
 
 ```sh
-pnpm install --frozen-lockfile
-pnpm db:start
+vp install --frozen-lockfile
+vp run db:start
 ```
 
 In another terminal:
 
 ```sh
-pnpm db:publish
-pnpm dev
+vp run db:publish
+vp run dev
 ```
 
 Open [http://127.0.0.1:3002](http://127.0.0.1:3002). The database runs on port 3001. The module seeds two boards on first publication; `db:publish` preserves existing data. The local CLI and database state live in ignored `.tools/` and `.spacetime/` directories. If the CLI is installed elsewhere, set `SPACETIME_BIN` to its executable path.
@@ -40,10 +41,23 @@ The **lightning bolt** kills active WebSocket connections and HTTP requests once
 
 `SpacetimeDBProvider` creates one SDK connection per server render and a fresh connection in the browser. Each `useTable` call starts a query subscription. The server waits for `onApplied`, reads the SDK cache, serializes the rows into Solid's SSR result, and closes the request connection. On hydration, a Solid 2 memo with `ssrSource: "hybrid"` retains those rows while the browser connection subscribes. Table callbacks reread the SDK cache and update a signal; the subscription is removed when its owner is released. `useRow` selects the first row of a primary-key query. There is no application API relay or separate server-side data model.
 
-TypeScript and formatting checks are available with `pnpm typecheck` and
-`pnpm format:check`. The browser checks in `scripts/check-*.mjs` run against
-the development server; install their browsers with `pnpm exec playwright install`.
+Vite Plus runs formatting, type-aware linting, and TypeScript checks together
+with `vp run check`. Use `vp run check:fix` to apply fixes, `vp run format` to
+format, or `vp run lint` to lint. The pre-commit hook checks staged files. Editor settings
+recommend the Vite Plus extension pack and enable formatting and fixes on save.
+Authored local imports use `#/` aliases and explicit file extensions, with type
+imports in separate declarations. Generated database bindings are excluded from
+formatting and linting.
 
-The production client build completes, but the full build currently stalls
-before emitting the server bundle. Use the development server while that
+Project tasks live in `run.tasks` in `vite.config.ts`. Run an individual check
+with a task such as `vp run test:card-order` or `vp run test:subscriptions`.
+`vp run test` runs all checks sequentially; the browser checks require the
+development server and database to be running. Install their browsers with
+`vp exec playwright install`. Servers, database commands, formatting fixes, and
+live checks are uncached. Add future executable scripts to the same task list;
+`package.json` keeps only the install-time `prepare` hook.
+
+The production build currently emits only the client bundle. Solid's build
+orchestration treats csslit's build hook as owning the remaining environments,
+so the server bundle is not rebuilt. Use the development server while that
 build issue is unresolved.

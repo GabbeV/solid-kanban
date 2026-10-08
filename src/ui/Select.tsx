@@ -1,7 +1,9 @@
-import { css } from "@csslit/core";
 import type { JSX } from "@solidjs/web";
+
+import { css } from "@csslit/core";
 import { omit } from "solid-js";
-import { colors, radius, control, space } from "#/theme.ts";
+
+import { colors, control, radius, space } from "#/theme.ts";
 
 // UA dropdown arrow via data-URI (currentColor cannot be used in background-image).
 const chevronDown = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11' fill='none'%3E%3Cpath d='M2.5 4.5l3 3 3-3' stroke='%236b7c93' stroke-width='1' stroke-linecap='butt' stroke-linejoin='miter'/%3E%3C/svg%3E")`;

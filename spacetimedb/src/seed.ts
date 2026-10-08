@@ -1,5 +1,6 @@
-import type { Ctx } from "./index";
-import { orderDigits } from "../../src/primitives/ordered-key";
+import type { Ctx } from "#/server/index.ts";
+
+import { orderDigits } from "#/primitives/ordered-key.ts";
 
 export function seed(ctx: Ctx) {
   const seededAt = Number(ctx.timestamp.microsSinceUnixEpoch / 1000n);
@@ -19,14 +20,13 @@ export function seed(ctx: Ctx) {
     color: "orange",
   });
   for (const boardId of ["studio", "weekend"]) {
-    ["Ideas", "Up next", "In the making", "Made it"].forEach(
-      (title, position) =>
-        ctx.db.lane.insert({
-          id: `${boardId}-${position}`,
-          boardId,
-          title,
-          position,
-        }),
+    ["Ideas", "Up next", "In the making", "Made it"].forEach((title, position) =>
+      ctx.db.lane.insert({
+        id: `${boardId}-${position}`,
+        boardId,
+        title,
+        position,
+      }),
     );
   }
   const cards = [
@@ -114,27 +114,15 @@ export function seed(ctx: Ctx) {
   );
 
   const sampleComments: [cardId: string, author: string, text: string][] = [
-    [
-      "welcome-5",
-      "Maya",
-      "The saving state should be clear without blocking the card.",
-    ],
+    ["welcome-5", "Maya", "The saving state should be clear without blocking the card."],
     [
       "welcome-5",
       "Alex",
       "Let's check the layout with priority, a due date, comments, and an assignee together.",
     ],
     ["welcome-5", "Sam", "I'll try the crowded card at a narrow viewport too."],
-    [
-      "welcome-2",
-      "Alex",
-      "Three people mentioned wanting a simpler first step.",
-    ],
-    [
-      "welcome-2",
-      "Maya",
-      "I can turn those notes into a shorter welcome flow.",
-    ],
+    ["welcome-2", "Alex", "Three people mentioned wanting a simpler first step."],
+    ["welcome-2", "Maya", "I can turn those notes into a shorter welcome flow."],
     ["welcome-6", "Sam", "The spacing scale is ready for review."],
   ];
   sampleComments.forEach(([cardId, author, text], i) =>

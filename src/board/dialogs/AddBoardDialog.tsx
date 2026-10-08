@@ -1,5 +1,8 @@
 import { css } from "@csslit/core";
 import { Show, action, createSignal, createStore } from "solid-js";
+
+import { useName } from "#/name.tsx";
+import { useReducers } from "#/spacetimedb.tsx";
 import { space } from "#/theme.ts";
 import { Button } from "#/ui/Button.tsx";
 import { Dialog } from "#/ui/Dialog.tsx";
@@ -7,8 +10,6 @@ import { Field } from "#/ui/Field.tsx";
 import { Input } from "#/ui/Input.tsx";
 import { Notice } from "#/ui/Notice.tsx";
 import { Textarea } from "#/ui/Textarea.tsx";
-import { useReducers } from "#/spacetimedb.tsx";
-import { useName } from "#/name.tsx";
 
 export function AddBoardDialog(props: { onClose: () => void }) {
   const reducers = useReducers();
@@ -22,13 +23,15 @@ export function AddBoardDialog(props: { onClose: () => void }) {
   }) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
+    const title = fields.get("title");
+    const description = fields.get("description");
     boardId ??= crypto.randomUUID();
     try {
       yield reducers.createBoard({
         boardId,
         actor: name(),
-        title: String(fields.get("title")),
-        description: String(fields.get("description")),
+        title: typeof title === "string" ? title : "",
+        description: typeof description === "string" ? description : "",
       });
       setError(undefined);
       props.onClose();

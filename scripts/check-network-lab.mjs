@@ -1,42 +1,33 @@
-import assert from "node:assert/strict";
 import { chromium, firefox } from "@playwright/test";
+import assert from "node:assert/strict";
 
 for (const browserType of [chromium, firefox]) {
   const browser = await browserType.launch();
   try {
     const page = await browser.newPage({
       viewport: { width: 1200, height: 800 },
-      ...(browserType === chromium
-        ? { permissions: ["local-network-access"] }
-        : {}),
+      ...(browserType === chromium ? { permissions: ["local-network-access"] } : {}),
     });
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     const receivedOutgoing = [];
     let server;
-    await page.routeWebSocket(
-      "ws://127.0.0.1:3002/network-lab-check",
-      (socket) => {
-        server = socket;
-        socket.onMessage((message) => {
-          receivedOutgoing.push(message);
-          if (message === "round-trip-check") socket.send(message);
-        });
-      },
-    );
+    await page.routeWebSocket("ws://127.0.0.1:3002/network-lab-check", (socket) => {
+      server = socket;
+      socket.onMessage((message) => {
+        receivedOutgoing.push(message);
+        if (message === "round-trip-check") socket.send(message);
+      });
+    });
     await page.route("**/__network-lab", (route) =>
       route.fulfill({
         contentType: "text/html",
         body: '<!doctype html><html><head><meta name="color-scheme" content="light dark"></head><body><div id="root"></div><script type="module" src="/scripts/fixtures/network-lab.tsx"></script></body></html>',
       }),
     );
-    await page.route("**/network-lab-http-check", (route) =>
-      route.fulfill({ body: "ok" }),
-    );
+    await page.route("**/network-lab-http-check", (route) => route.fulfill({ body: "ok" }));
     await page.goto("http://127.0.0.1:3002/__network-lab");
-    await page.waitForFunction(
-      () => window.networkSocket?.readyState === WebSocket.OPEN,
-    );
+    await page.waitForFunction(() => window.networkSocket?.readyState === WebSocket.OPEN);
 
     const configure = (delayMs, jitter = 0, sample = 0.75) =>
       page.evaluate(
@@ -70,10 +61,7 @@ for (const browserType of [chromium, firefox]) {
         `${kind} should add 1000ms round-trip delay, got ${duration}ms`,
       );
     }
-    console.log(
-      `PASS (${browserType.name()}): WS and HTTP round-trip timing.`,
-      elapsed,
-    );
+    console.log(`PASS (${browserType.name()}): WS and HTTP round-trip timing.`, elapsed);
     await page.evaluate(() => {
       window.networkReceived.length = 0;
     });
@@ -81,8 +69,7 @@ for (const browserType of [chromium, firefox]) {
 
     const send = async (direction, label) => {
       if (direction === "in") server.send(label);
-      else
-        await page.evaluate((label) => window.networkSocket.send(label), label);
+      else await page.evaluate((label) => window.networkSocket.send(label), label);
     };
     const waitProgress = (direction, progress) =>
       page.waitForFunction(
@@ -90,8 +77,7 @@ for (const browserType of [chromium, firefox]) {
           window.networkLab
             .snapshot()
             .packets.some(
-              (packet) =>
-                packet.direction === direction && packet.progress >= progress,
+              (packet) => packet.direction === direction && packet.progress >= progress,
             ),
         { direction, progress },
         { timeout: 10000 },
@@ -101,25 +87,19 @@ for (const browserType of [chromium, firefox]) {
         ({ direction, kind }) => {
           const snapshot = window.networkLab.snapshot();
           const row = snapshot.rows.find(
-            (row) =>
-              row.kind === kind &&
-              (kind === "http" || row.direction === direction),
+            (row) => row.kind === kind && (kind === "http" || row.direction === direction),
           );
-          const label = [...document.querySelectorAll("[title]")].find(
-            (element) =>
-              element.textContent.startsWith(
-                kind === "http" ? "HTTP" : direction === "in" ? "WS ←" : "WS →",
-              ),
+          const label = [...document.querySelectorAll("[title]")].find((element) =>
+            element.textContent.startsWith(
+              kind === "http" ? "HTTP" : direction === "in" ? "WS ←" : "WS →",
+            ),
           );
           const track = label.nextElementSibling;
           const dots = [...track.querySelectorAll("span[aria-hidden=true]")];
-          const packets = snapshot.packets.filter(
-            (packet) => packet.rowId === row.id,
-          );
+          const packets = snapshot.packets.filter((packet) => packet.rowId === row.id);
           return packets.map((packet, index) => {
             const dot = dots[index];
-            const position =
-              packet.direction === "in" ? 1 - packet.progress : packet.progress;
+            const position = packet.direction === "in" ? 1 - packet.progress : packet.progress;
             return {
               ...packet,
               x: dot.getBoundingClientRect().x,
@@ -136,8 +116,7 @@ for (const browserType of [chromium, firefox]) {
     const observe = () =>
       page.evaluate(async () => {
         const start = performance.now();
-        while (performance.now() - start < 200)
-          await new Promise(requestAnimationFrame);
+        while (performance.now() - start < 200) await new Promise(requestAnimationFrame);
       });
     const assertPositions = (packets, direction) => {
       for (const [index, packet] of packets.entries()) {
@@ -159,15 +138,12 @@ for (const browserType of [chromium, firefox]) {
         }
       }
     };
-    const toggle = () =>
-      page.getByRole("button", { name: /Network lab/ }).click();
+    const toggle = () => page.getByRole("button", { name: /Network lab/ }).click();
     let incomingCount = 0;
     for (const direction of ["in", "out"]) {
       for (const jitter of [0, 1]) {
         await configure(4000, jitter);
-        const labels = [0, 1, 2].map(
-          (index) => `${direction}:${jitter}:${index}`,
-        );
+        const labels = [0, 1, 2].map((index) => `${direction}:${jitter}:${index}`);
         const outgoingCount = receivedOutgoing.length + 3;
         incomingCount += direction === "in" ? 3 : 0;
         if (direction === "out") await toggle();
@@ -178,9 +154,7 @@ for (const browserType of [chromium, firefox]) {
         await send(direction, labels[2]);
         await page.waitForFunction(
           (direction) =>
-            window.networkLab
-              .snapshot()
-              .packets.filter((packet) => packet.direction === direction)
+            window.networkLab.snapshot().packets.filter((packet) => packet.direction === direction)
               .length === 3,
           direction,
         );
@@ -195,8 +169,7 @@ for (const browserType of [chromium, firefox]) {
         assert.ok(distance > 0.02, "Dots must advance naturally");
         after.forEach((packet, index) =>
           assert.ok(
-            Math.abs(packet.progress - before[index].progress - distance) <
-              1e-9,
+            Math.abs(packet.progress - before[index].progress - distance) < 1e-9,
             "Messages share the channel's changing speed",
           ),
         );
@@ -216,14 +189,9 @@ for (const browserType of [chromium, firefox]) {
             (count) => window.networkReceived.length === count,
             incomingCount,
           );
-          assert.deepEqual(
-            await page.evaluate(() => window.networkReceived.slice(-3)),
-            labels,
-          );
+          assert.deepEqual(await page.evaluate(() => window.networkReceived.slice(-3)), labels);
         } else {
-          await page.waitForFunction(
-            () => window.networkLab.snapshot().packets.length === 0,
-          );
+          await page.waitForFunction(() => window.networkLab.snapshot().packets.length === 0);
           // Transport callbacks follow the final progress publication in microtasks.
           await page.evaluate(() => Promise.resolve());
           assert.equal(receivedOutgoing.length, outgoingCount);
@@ -252,16 +220,9 @@ for (const browserType of [chromium, firefox]) {
       "Changing transit speed must affect messages already in flight",
     );
     await configure(0);
-    await page.waitForFunction(
-      () => window.networkReceived.at(-1) === "speed-change",
-    );
-    assert.equal(
-      await page.evaluate(() => window.networkLab.snapshot().packets.length),
-      0,
-    );
-    console.log(
-      `PASS (${browserType.name()}): live delay changes and real-speed draining.`,
-    );
+    await page.waitForFunction(() => window.networkReceived.at(-1) === "speed-change");
+    assert.equal(await page.evaluate(() => window.networkLab.snapshot().packets.length), 0);
+    console.log(`PASS (${browserType.name()}): live delay changes and real-speed draining.`);
 
     // Independent channel conditions; changing variation eases toward a new speed.
     await configure(6000, 1, 0.1);
@@ -270,9 +231,7 @@ for (const browserType of [chromium, firefox]) {
       window.networkRandom = 0.9;
     });
     await send("in", "fast-channel");
-    await page.waitForFunction(
-      () => window.networkLab.snapshot().packets.length === 2,
-    );
+    await page.waitForFunction(() => window.networkLab.snapshot().packets.length === 2);
     const outBefore = await samplePlayback("out");
     const inBefore = await samplePlayback("in");
     await observe();
@@ -292,17 +251,10 @@ for (const browserType of [chromium, firefox]) {
       newDistance > outAfter[0].progress - outBefore[0].progress,
       "Speed should approach its faster target",
     );
-    assert.ok(
-      newDistance < 0.11,
-      "Speed should ease rather than immediately jump to the target",
-    );
+    assert.ok(newDistance < 0.11, "Speed should ease rather than immediately jump to the target");
     await configure(0);
-    await page.waitForFunction(
-      () => window.networkLab.snapshot().packets.length === 0,
-    );
-    console.log(
-      `PASS (${browserType.name()}): independent directions and smooth variation.`,
-    );
+    await page.waitForFunction(() => window.networkLab.snapshot().packets.length === 0);
+    console.log(`PASS (${browserType.name()}): independent directions and smooth variation.`);
 
     await configure(2000);
     await page.evaluate(() => {
@@ -345,10 +297,7 @@ for (const browserType of [chromium, firefox]) {
     await waitProgress("out", 0.1);
     await page.evaluate(() => window.abortHttp());
     await page.waitForFunction(() => window.httpOutcome === "AbortError");
-    assert.equal(
-      await page.evaluate(() => window.networkLab.snapshot().packets.length),
-      0,
-    );
+    assert.equal(await page.evaluate(() => window.networkLab.snapshot().packets.length), 0);
     assert.deepEqual(errors, []);
     console.log(`PASS (${browserType.name()}): cancellation; no page errors.`);
   } finally {

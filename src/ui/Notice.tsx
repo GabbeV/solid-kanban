@@ -1,10 +1,10 @@
-import { css } from "@csslit/core";
 import type { JSX } from "@solidjs/web";
-import { colors, radius, fontSize, lineHeight } from "#/theme.ts";
 
-export function Notice(
-  props: Omit<JSX.HTMLAttributes<HTMLDivElement>, "class">,
-) {
+import { css } from "@csslit/core";
+
+import { colors, fontSize, lineHeight, radius } from "#/theme.ts";
+
+export function Notice(props: Omit<JSX.HTMLAttributes<HTMLDivElement>, "class">) {
   return (
     <div
       {...props}

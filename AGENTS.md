@@ -20,3 +20,19 @@
   open modals or wait for unrelated actions before showing their skeletons.
 - If the intended Solid 2 pattern is unclear, stop and ask for direction instead
   of introducing a workaround.
+
+# Commands
+
+- Use `vp` commands. Run project tasks with `vp run <name>`.
+- Register new executable scripts in `run.tasks` in `vite.config.ts`; keep
+  `package.json` scripts for package-manager lifecycle hooks only.
+- Disable task caching for servers, commands that change source or database
+  state, and tests that depend on the live app or database.
+- Add new checks to the sequential `test` task. Browser checks require the
+  existing dev server on port 3002; do not start extra servers or change ports.
+
+# Naming
+
+- Import generated database row types with
+  `import type * as db from "#/module_bindings/types.ts"` and use names such as
+  `db.Card`, `db.Lane`, and `db.Board`. Keep component names unqualified.

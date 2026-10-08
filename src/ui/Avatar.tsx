@@ -1,4 +1,5 @@
 import { css } from "@csslit/core";
+
 import { colors, fontSize } from "#/theme.ts";
 
 export function Avatar(props: { name: string; variant?: "compact" }) {

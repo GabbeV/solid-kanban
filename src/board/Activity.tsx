@@ -1,10 +1,14 @@
-import { type ParentProps, For, Loading } from "solid-js";
-import { useParams } from "@solidjs/router";
+import type * as db from "#/module_bindings/types.ts";
+import type { ParentProps } from "solid-js";
+
 import { css } from "@csslit/core";
-import { space, colors, fontSize, lineHeight } from "#/theme.ts";
-import { Avatar } from "#/ui/Avatar.tsx";
+import { useParams } from "@solidjs/router";
+import { For, Loading } from "solid-js";
+
 import { tables } from "#/module_bindings/index.ts";
 import { useTable } from "#/spacetimedb.tsx";
+import { colors, fontSize, lineHeight, space } from "#/theme.ts";
+import { Avatar } from "#/ui/Avatar.tsx";
 import { Skeleton } from "#/ui/Skeleton.tsx";
 
 export function Activity(props: ParentProps) {
@@ -72,15 +76,14 @@ function ActivityContents() {
     tables.recentActivity.where((event) => event.boardId.eq(boardId())),
   );
   const activity = () =>
-    [...boardActivity()].sort(
-      (a, b) => b.createdAt - a.createdAt || a.id.localeCompare(b.id),
-    );
+    [...boardActivity()].sort((a, b) => b.createdAt - a.createdAt || a.id.localeCompare(b.id));
 
   return (
     <>
       <ol
         class={css`
           max-width: 720px;
+          margin: 0;
           padding-top: ${space.md}px;
         `}
       >
@@ -104,53 +107,54 @@ function ActivityContents() {
             </li>
           }
         >
-          {(event) => (
-            <li
-              class={css`
-                list-style: none;
-                display: flex;
-                gap: ${space.md}px;
-                align-items: center;
-                font-size: ${fontSize.control}px;
-
-                border-bottom: 1px solid ${colors.border};
-                padding: ${space.md}px 0;
-              `}
-            >
-              <Avatar name={event().actor} />
-              <div
-                class={css`
-                  display: flex;
-                  flex-direction: column;
-                  gap: ${space.sm}px;
-                `}
-              >
-                <span
-                  class={css`
-                    line-height: ${lineHeight.control}px;
-                  `}
-                >
-                  <strong>{event().actor}</strong> {event().text}
-                </span>
-                <small
-                  class={css`
-                    display: block;
-                    color: ${colors.muted};
-                    font-size: ${fontSize.caption}px;
-                    line-height: ${lineHeight.caption}px;
-                  `}
-                >
-                  {new Date(event().createdAt)
-                    .toISOString()
-                    .replace("T", " · ")
-                    .slice(0, 21)}
-                  {" UTC · confirmed"}
-                </small>
-              </div>
-            </li>
-          )}
+          {(event) => <ActivityEntry event={event()} />}
         </For>
       </ol>
     </>
+  );
+}
+
+function ActivityEntry(props: { event: db.Activity }) {
+  return (
+    <li
+      class={css`
+        list-style: none;
+        display: flex;
+        gap: ${space.md}px;
+        align-items: center;
+        font-size: ${fontSize.control}px;
+
+        border-bottom: 1px solid ${colors.border};
+        padding: ${space.md}px 0;
+      `}
+    >
+      <Avatar name={props.event.actor} />
+      <div
+        class={css`
+          display: flex;
+          flex-direction: column;
+          gap: ${space.sm}px;
+        `}
+      >
+        <span
+          class={css`
+            line-height: ${lineHeight.control}px;
+          `}
+        >
+          <strong>{props.event.actor}</strong> {props.event.text}
+        </span>
+        <small
+          class={css`
+            display: block;
+            color: ${colors.muted};
+            font-size: ${fontSize.caption}px;
+            line-height: ${lineHeight.caption}px;
+          `}
+        >
+          {new Date(props.event.createdAt).toISOString().replace("T", " · ").slice(0, 21)}
+          {" UTC · confirmed"}
+        </small>
+      </div>
+    </li>
   );
 }

@@ -1,8 +1,11 @@
 {
   "name": "solid-kanban-db",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
+  "imports": {
+    "#/server/*": "./src/*"
+  },
   "dependencies": {
     "spacetimedb": "2.10.1"
   }

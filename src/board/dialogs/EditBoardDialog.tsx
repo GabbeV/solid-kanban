@@ -1,19 +1,21 @@
+import type * as db from "#/module_bindings/types.ts";
+
 import { css } from "@csslit/core";
 import { Show, action, createSignal, createStore, untrack } from "solid-js";
-import type { Board } from "../../module_bindings/types";
+
+import { useName } from "#/name.tsx";
+import { useReducers } from "#/spacetimedb.tsx";
 import { space } from "#/theme.ts";
 import { Button } from "#/ui/Button.tsx";
-import { Icon } from "#/ui/Icon.tsx";
 import { Dialog } from "#/ui/Dialog.tsx";
 import { Field } from "#/ui/Field.tsx";
+import { Icon } from "#/ui/Icon.tsx";
 import { Input } from "#/ui/Input.tsx";
 import { Notice } from "#/ui/Notice.tsx";
 import { Textarea } from "#/ui/Textarea.tsx";
-import { useReducers } from "#/spacetimedb.tsx";
-import { useName } from "#/name.tsx";
 
 export function EditBoardDialog(props: {
-  board: Board;
+  board: db.Board;
   onClose: () => void;
   onDeleted: (id: string) => void;
 }) {
@@ -45,14 +47,14 @@ export function EditBoardDialog(props: {
   }) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
-    const title = String(fields.get("title"));
-    const description = String(fields.get("description"));
+    const title = fields.get("title");
+    const description = fields.get("description");
     try {
       yield reducers.editBoard({
         boardId: props.board.id,
         actor: name(),
-        title,
-        description,
+        title: typeof title === "string" ? title : "",
+        description: typeof description === "string" ? description : "",
       });
       setError(undefined);
       props.onClose();

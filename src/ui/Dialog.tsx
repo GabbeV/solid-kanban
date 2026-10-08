@@ -1,16 +1,11 @@
-import { css } from "@csslit/core";
 import type { JSX } from "@solidjs/web";
-import { onSettled, onCleanup } from "solid-js";
-import {
-  colors,
-  radius,
-  space,
-  fontSize,
-  lineHeight,
-  breakpoints,
-} from "#/theme.ts";
-import { Icon } from "./Icon";
-import { Button } from "./Button";
+
+import { css } from "@csslit/core";
+import { onCleanup, onSettled } from "solid-js";
+
+import { breakpoints, colors, fontSize, lineHeight, radius, space } from "#/theme.ts";
+import { Button } from "#/ui/Button.tsx";
+import { Icon } from "#/ui/Icon.tsx";
 
 export function Dialog(props: {
   title: string;
@@ -29,8 +24,7 @@ export function Dialog(props: {
     if (returnFocus)
       onSettled(() => {
         // Resolve after removal: live updates may have replaced the opener.
-        if (!document.querySelector("dialog[open]"))
-          returnFocus()?.focus({ preventScroll: true });
+        if (!document.querySelector("dialog[open]")) returnFocus()?.focus({ preventScroll: true });
       });
   }
   function close() {
@@ -90,15 +84,9 @@ export function Dialog(props: {
           props.baselineHeight &&
             css`
               justify-content: flex-start;
-              padding-top: max(
-                ${space.lg}px,
-                calc((100dvh - var(--dialog-baseline-wide)) / 2)
-              );
+              padding-top: max(${space.lg}px, calc((100dvh - var(--dialog-baseline-wide)) / 2));
               @media (max-width: ${breakpoints.phone}px) {
-                padding-top: max(
-                  ${space.lg}px,
-                  calc((100dvh - var(--dialog-baseline-phone)) / 2)
-                );
+                padding-top: max(${space.lg}px, calc((100dvh - var(--dialog-baseline-phone)) / 2));
               }
             `,
         ]}
@@ -147,13 +135,7 @@ export function Dialog(props: {
             >
               {props.title}
             </h2>
-            <Button
-              variant="ghost"
-              iconOnly
-              bleed
-              aria-label="Close dialog"
-              onClick={close}
-            >
+            <Button variant="ghost" iconOnly bleed aria-label="Close dialog" onClick={close}>
               <Icon name="close" />
             </Button>
           </header>

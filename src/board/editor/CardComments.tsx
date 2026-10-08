@@ -1,23 +1,18 @@
+import type * as db from "#/module_bindings/types.ts";
+
 import { css } from "@csslit/core";
-import {
-  For,
-  Loading,
-  Show,
-  action,
-  createOptimistic,
-  createSignal,
-  onSettled,
-} from "solid-js";
+import { For, Loading, Show, action, createOptimistic, createSignal, onSettled } from "solid-js";
+
 import { tables } from "#/module_bindings/index.ts";
-import { useReducers, useTable } from "#/spacetimedb.tsx";
 import { useName } from "#/name.tsx";
+import { useReducers, useTable } from "#/spacetimedb.tsx";
 import { colors, fontSize, lineHeight, space } from "#/theme.ts";
 import { Avatar } from "#/ui/Avatar.tsx";
 import { Input } from "#/ui/Input.tsx";
 import { Notice } from "#/ui/Notice.tsx";
-import { Textarea } from "#/ui/Textarea.tsx";
+import { Skeleton } from "#/ui/Skeleton.tsx";
 import { Spinner } from "#/ui/Spinner.tsx";
-import { CardCommentsSkeleton } from "./CardCommentsSkeleton";
+import { Textarea } from "#/ui/Textarea.tsx";
 
 export function CardComments(props: { cardId: string; boardId: string }) {
   const comments = useTable(() =>
@@ -80,11 +75,7 @@ export function CardComments(props: { cardId: string; boardId: string }) {
       <form
         onSubmit={addComment}
         onKeyDown={(event) => {
-          if (
-            event.key === "Enter" &&
-            (event.ctrlKey || event.metaKey) &&
-            !event.isComposing
-          ) {
+          if (event.key === "Enter" && (event.ctrlKey || event.metaKey) && !event.isComposing) {
             event.preventDefault();
             event.currentTarget.requestSubmit();
           }
@@ -192,74 +183,116 @@ export function CardComments(props: { cardId: string; boardId: string }) {
               </p>
             }
           >
-            {(item) => (
-              <article
-                class={css`
-                  display: flex;
-                  align-items: flex-start;
-                  gap: ${space.sm}px;
-                  font-size: ${fontSize.body}px;
-                  padding: ${space.sm}px 0;
-                `}
-              >
-                <Avatar name={item().author} />
-                <div
-                  class={css`
-                    flex: 1;
-                    min-width: 0;
-                    display: flex;
-                    flex-direction: column;
-                    gap: ${space.sm}px;
-                  `}
-                >
-                  <header
-                    class={css`
-                      display: flex;
-                      flex-wrap: wrap;
-                      align-items: center;
-                      gap: ${space.sm}px;
-                    `}
-                  >
-                    <strong
-                      class={css`
-                        overflow-wrap: anywhere;
-                      `}
-                    >
-                      {item().author}
-                    </strong>
-                    <time
-                      datetime={new Date(item().createdAt).toISOString()}
-                      class={css`
-                        display: flex;
-                        align-items: center;
-                        gap: ${space.sm}px;
-                        color: ${colors.muted};
-                        font-size: ${fontSize.caption}px;
-                        white-space: nowrap;
-                      `}
-                    >
-                      <span>·</span>
-                      <span>
-                        {new Date(item().createdAt).toISOString().slice(11, 16)}
-                        {" UTC"}
-                      </span>
-                    </time>
-                  </header>
-                  <p
-                    class={css`
-                      white-space: pre-wrap;
-                      overflow-wrap: anywhere;
-                      line-height: ${lineHeight.body}px;
-                    `}
-                  >
-                    {item().text}
-                  </p>
-                </div>
-              </article>
-            )}
+            {(item) => <Comment comment={item()} />}
           </For>
         </div>
       </Loading>
     </section>
+  );
+}
+
+function Comment(props: { comment: db.Comment }) {
+  return (
+    <article
+      class={css`
+        display: flex;
+        align-items: flex-start;
+        gap: ${space.sm}px;
+        font-size: ${fontSize.body}px;
+        padding: ${space.sm}px 0;
+      `}
+    >
+      <Avatar name={props.comment.author} />
+      <div
+        class={css`
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: ${space.sm}px;
+        `}
+      >
+        <header
+          class={css`
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: ${space.sm}px;
+          `}
+        >
+          <strong
+            class={css`
+              overflow-wrap: anywhere;
+            `}
+          >
+            {props.comment.author}
+          </strong>
+          <time
+            datetime={new Date(props.comment.createdAt).toISOString()}
+            class={css`
+              display: flex;
+              align-items: center;
+              gap: ${space.sm}px;
+              color: ${colors.muted};
+              font-size: ${fontSize.caption}px;
+              white-space: nowrap;
+            `}
+          >
+            <span>·</span>
+            <span>
+              {new Date(props.comment.createdAt).toISOString().slice(11, 16)}
+              {" UTC"}
+            </span>
+          </time>
+        </header>
+        <p
+          class={css`
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            line-height: ${lineHeight.body}px;
+          `}
+        >
+          {props.comment.text}
+        </p>
+      </div>
+    </article>
+  );
+}
+
+export function CardCommentsSkeleton() {
+  return (
+    <article
+      aria-hidden="true"
+      class={css`
+        display: flex;
+        align-items: flex-start;
+        gap: ${space.sm}px;
+        padding: ${space.sm}px 0;
+        mask-image: linear-gradient(to bottom, black 35%, transparent 80%);
+      `}
+    >
+      <Skeleton height={24} width={24} circle />
+      <div
+        class={css`
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: ${space.sm}px;
+        `}
+      >
+        <header
+          class={css`
+            display: flex;
+            align-items: center;
+            gap: ${space.sm}px;
+          `}
+        >
+          <Skeleton height={fontSize.body} width={80} />
+          <Skeleton height={fontSize.caption} width={48} />
+        </header>
+        <Skeleton height={fontSize.body} width={340} />
+      </div>
+    </article>
   );
 }

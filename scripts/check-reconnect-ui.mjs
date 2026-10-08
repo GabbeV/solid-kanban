@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { chromium, firefox } from "@playwright/test";
+import assert from "node:assert/strict";
 
 for (const type of [chromium, firefox]) {
   const browser = await type.launch();
@@ -19,10 +19,7 @@ for (const type of [chromium, firefox]) {
       localStorage.setItem("solid-kanban:network-lab:open", "false");
     });
     await page.goto("http://127.0.0.1:3002/b/studio");
-    await page
-      .locator("[data-lane-id] article[data-card-id]")
-      .first()
-      .waitFor();
+    await page.locator("[data-lane-id] article[data-card-id]").first().waitFor();
     const boardCards = () =>
       page.locator("[data-lane-id] article[data-card-id]").evaluateAll((els) =>
         els.map((el) => ({
@@ -33,9 +30,7 @@ for (const type of [chromium, firefox]) {
     const original = await boardCards();
     assert.ok(original.length >= 2);
     await page.getByRole("button", { name: /^Network lab/ }).click();
-    await page
-      .getByLabel("Round-trip delay", { exact: true })
-      .selectOption("60000");
+    await page.getByLabel("Round-trip delay", { exact: true }).selectOption("60000");
     const moving = original.slice(0, 2);
     for (const { id, lane: source } of moving) {
       const target = original.find((card) => card.lane !== source).lane;
@@ -43,10 +38,7 @@ for (const type of [chromium, firefox]) {
       const sourceBox = await card.boundingBox();
       const lane = page.locator(`[data-lane-id="${target}"]`);
       const laneBox = await lane.boundingBox();
-      const first = await lane
-        .locator("article[data-card-id]")
-        .first()
-        .boundingBox();
+      const first = await lane.locator("article[data-card-id]").first().boundingBox();
       await page.mouse.move(sourceBox.x + 30, sourceBox.y + 40);
       await page.mouse.down();
       await page.mouse.move(laneBox.x + laneBox.width / 2, first.y + 1, {
@@ -55,8 +47,8 @@ for (const type of [chromium, firefox]) {
       await page.mouse.up();
       await page.waitForFunction(
         (id) =>
-          [...document.querySelectorAll(`[data-card-id="${id}"] span`)].some(
-            (el) => getComputedStyle(el).animationName.includes("spinner"),
+          [...document.querySelectorAll(`[data-card-id="${id}"] span`)].some((el) =>
+            getComputedStyle(el).animationName.includes("spinner"),
           ),
         id,
         { timeout: 3000 },
@@ -66,17 +58,12 @@ for (const type of [chromium, firefox]) {
     for (const { id } of moving) {
       const card = page.locator(`[data-lane-id] article[data-card-id="${id}"]`);
       await card.getByRole("status").waitFor({ timeout: 2000 });
-      assert.match(
-        await card.getByRole("status").innerText(),
-        /Changes not confirmed/,
-      );
+      assert.match(await card.getByRole("status").innerText(), /Changes not confirmed/);
       assert.equal(
         await card
           .locator("span")
           .evaluateAll((els) =>
-            els.some((el) =>
-              getComputedStyle(el).animationName.includes("spinner"),
-            ),
+            els.some((el) => getComputedStyle(el).animationName.includes("spinner")),
           ),
         false,
       );
@@ -93,27 +80,17 @@ for (const type of [chromium, firefox]) {
       "Failure/discard must settle while still offline",
     );
     await page.getByRole("link", { name: "Archive", exact: true }).click();
-    await page
-      .getByRole("status", { name: "Loading archive", exact: true })
-      .waitFor();
-    await page
-      .getByLabel("Round-trip delay", { exact: true })
-      .selectOption("0");
+    await page.getByRole("status", { name: "Loading archive", exact: true }).waitFor();
+    await page.getByLabel("Round-trip delay", { exact: true }).selectOption("0");
     await page.getByRole("button", { name: "Disconnect", exact: true }).click();
     await page
       .getByRole("status", { name: "Loading archive", exact: true })
       .waitFor({ state: "detached", timeout: 25000 });
     await page.getByRole("link", { name: "Board", exact: true }).click();
-    await page
-      .locator("[data-lane-id] article[data-card-id]")
-      .first()
-      .waitFor();
+    await page.locator("[data-lane-id] article[data-card-id]").first().waitFor();
     assert.deepEqual(await boardCards(), original);
     await page.reload();
-    await page
-      .locator("[data-lane-id] article[data-card-id]")
-      .first()
-      .waitFor();
+    await page.locator("[data-lane-id] article[data-card-id]").first().waitFor();
     assert.deepEqual(
       await boardCards(),
       original,

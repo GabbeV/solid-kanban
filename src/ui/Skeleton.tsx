@@ -1,4 +1,5 @@
 import { css } from "@csslit/core";
+
 import { colors, radius } from "#/theme.ts";
 
 export function Skeleton(props: {
@@ -50,9 +51,7 @@ export function Skeleton(props: {
             animation: none;
           }
         `,
-        (props.height <= 16 ||
-          props.circle ||
-          props.variant === "background") &&
+        (props.height <= 16 || props.circle || props.variant === "background") &&
           css`
             background: linear-gradient(
               100deg,

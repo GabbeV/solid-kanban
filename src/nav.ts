@@ -8,17 +8,10 @@ export function trimSlash(pathname: string) {
   return pathname.replace(/\/+$/, "");
 }
 
-export function openDialog(
-  navigate: Navigator,
-  location: Location,
-  segment: string,
-) {
-  navigate(
-    `${trimSlash(location.pathname)}/${segment}${location.search}${location.hash}`,
-    {
-      state: dialogState,
-    },
-  );
+export function openDialog(navigate: Navigator, location: Location, segment: string) {
+  navigate(`${trimSlash(location.pathname)}/${segment}${location.search}${location.hash}`, {
+    state: dialogState,
+  });
 }
 
 export function closeDialog(
@@ -32,8 +25,7 @@ export function closeDialog(
   }
 
   const currentPath = trimSlash(location.pathname);
-  const pathname =
-    fallbackPath ?? currentPath.slice(0, currentPath.lastIndexOf("/"));
+  const pathname = fallbackPath ?? currentPath.slice(0, currentPath.lastIndexOf("/"));
   navigate(`${pathname || "/"}${location.search}${location.hash}`, {
     replace: true,
   });

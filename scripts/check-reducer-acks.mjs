@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { chromium } from "@playwright/test";
+import assert from "node:assert/strict";
 const browser = await chromium.launch();
 const context = await browser.newContext({
   permissions: ["local-network-access"],
@@ -42,9 +42,7 @@ try {
     }),
   );
   await page.goto("http://127.0.0.1:3002/__event-ack?board=" + boardId);
-  await page.waitForFunction(
-    () => document.getElementById("title")?.textContent === "Initial",
-  );
+  await page.waitForFunction(() => document.getElementById("title")?.textContent === "Initial");
   await page.evaluate(() => {
     window.events = [];
     window.fixtureDb.db.reducerAck.onInsert((_, event) => {
@@ -64,17 +62,10 @@ try {
     "Initial",
     "Confirmed cache must remain held by the action",
   );
-  assert.deepEqual(await page.evaluate(() => window.events), [
-    { sequence: "1", title: "Held 1" },
-  ]);
-  assert.equal(
-    await page.evaluate(() => window.fixtureDb.db.reducerAck.count()),
-    0n,
-  );
+  assert.deepEqual(await page.evaluate(() => window.events), [{ sequence: "1", title: "Held 1" }]);
+  assert.equal(await page.evaluate(() => window.fixtureDb.db.reducerAck.count()), 0n);
   await page.evaluate(() => window.fixture.releases["Held 1"]());
-  await page.waitForFunction(
-    () => document.getElementById("title")?.textContent === "Held 1",
-  );
+  await page.waitForFunction(() => document.getElementById("title")?.textContent === "Held 1");
   const error = await page.evaluate(async () => {
     try {
       await window.fixture.fail();
@@ -102,9 +93,7 @@ try {
   await page.waitForFunction(() => !!window.fixture.releases["Held 2"]);
   assert.equal(await page.locator("#title").innerText(), "Held 1");
   await page.evaluate(() => window.fixture.releases["Held 2"]());
-  await page.waitForFunction(
-    () => document.getElementById("title")?.textContent === "Held 2",
-  );
+  await page.waitForFunction(() => document.getElementById("title")?.textContent === "Held 2");
   assert.deepEqual(errors, []);
   console.log(
     "PASS real event callbacks: cache delivery held until action ends; rollback emits no ack; no-op success and sequence gaps work; event cache remains empty.",

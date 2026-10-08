@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { chromium } from "@playwright/test";
+import assert from "node:assert/strict";
 
 const browser = await chromium.launch();
 try {
@@ -17,17 +17,14 @@ try {
     await page.waitForFunction(() => !!window.fixture);
   };
   const count = () => page.evaluate(() => window.fixture.registrations.length);
-  const pending = async (id) =>
-    assert.equal(await page.locator(`#${id}`).innerText(), "Pending");
+  const pending = async (id) => assert.equal(await page.locator(`#${id}`).innerText(), "Pending");
   const rows = async (id, ids) => {
     await page.waitForFunction(
       ({ id, ids }) => {
         try {
           return (
             JSON.stringify(
-              JSON.parse(document.getElementById(id).textContent).map(
-                (row) => row.id,
-              ),
+              JSON.parse(document.getElementById(id).textContent).map((row) => row.id),
             ) === JSON.stringify(ids)
           );
         } catch {
@@ -92,10 +89,7 @@ try {
       q((r) => r.id.eq("A").not().not()),
       [A],
     );
-    test(true, tables.board, [
-      q((r) => r.id.eq("A")),
-      q((r) => r.id.eq("A").not()),
-    ]);
+    test(true, tables.board, [q((r) => r.id.eq("A")), q((r) => r.id.eq("A").not())]);
     test(false, A, [tables.card]);
     test(
       true,
@@ -193,18 +187,14 @@ try {
       document.getElementById("a").textContent.includes("Changed") &&
       document.getElementById("a2").textContent.includes("Changed"),
   );
-  assert.equal(
-    await page.evaluate(() => window.fixture.registrations[0].unsubscribed),
-    false,
-  );
+  assert.equal(await page.evaluate(() => window.fixture.registrations[0].unsubscribed), false);
   await page.evaluate(() => {
     window.fixture.remove("a");
     window.fixture.remove("a2");
   });
   await page.waitForFunction(
     () =>
-      window.fixture.registrations[0].unsubscribed &&
-      window.fixture.listeners.update.size === 0,
+      window.fixture.registrations[0].unsubscribed && window.fixture.listeners.update.size === 0,
   );
   console.log(
     "PASS: covered readers load immediately, retain the supplying subscription, receive cache updates, and release all listeners/subscriptions.",
@@ -243,9 +233,7 @@ try {
   });
   await rows("a", ["A"]);
   await rows("b", ["B"]);
-  await page.evaluate(() =>
-    window.fixture.add("union", (r) => r.id.eq("A").or(r.id.eq("B"))),
-  );
+  await page.evaluate(() => window.fixture.add("union", (r) => r.id.eq("A").or(r.id.eq("B"))));
   await rows("union", ["A", "B"]);
   assert.equal(await count(), 2);
   await page.evaluate(() => {
@@ -253,29 +241,19 @@ try {
     window.fixture.remove("b");
   });
   assert.equal(
-    await page.evaluate(() =>
-      window.fixture.registrations.some((entry) => entry.unsubscribed),
-    ),
+    await page.evaluate(() => window.fixture.registrations.some((entry) => entry.unsubscribed)),
     false,
   );
   await page.evaluate(() => window.fixture.error(0));
-  await page
-    .locator("#union")
-    .filter({ hasText: "Subscription failed" })
-    .waitFor();
-  assert.equal(
-    await page.evaluate(() => window.fixture.registrations[1].unsubscribed),
-    true,
-  );
+  await page.locator("#union").filter({ hasText: "Subscription failed" }).waitFor();
+  assert.equal(await page.evaluate(() => window.fixture.registrations[1].unsubscribed), true);
   await page.waitForFunction(() => window.fixture.listeners.update.size === 0);
   console.log(
     "PASS: unions retain all covering subscriptions and propagate a supplying subscription's failure.",
   );
 
   await reset();
-  await page.evaluate(() =>
-    window.fixture.add("blue", (r) => r.color.eq("blue")),
-  );
+  await page.evaluate(() => window.fixture.add("blue", (r) => r.color.eq("blue")));
   await pending("blue");
   await page.evaluate(() => window.fixture.apply(0));
   await rows("blue", ["A", "B"]);
@@ -292,22 +270,12 @@ try {
   await page.evaluate(() => window.fixture.remove("gone"));
   await page.locator("#gone").waitFor({ state: "detached" });
   await page.evaluate(() => window.fixture.apply(0));
-  assert.equal(
-    await page.evaluate(() => window.fixture.registrations[0].unsubscribed),
-    true,
-  );
-  assert.equal(
-    await page.evaluate(() => window.fixture.listeners.update.size),
-    0,
-  );
-  console.log(
-    "PASS: disposing a pending reader unsubscribes safely when acknowledgement arrives.",
-  );
+  assert.equal(await page.evaluate(() => window.fixture.registrations[0].unsubscribed), true);
+  assert.equal(await page.evaluate(() => window.fixture.listeners.update.size), 0);
+  console.log("PASS: disposing a pending reader unsubscribes safely when acknowledgement arrives.");
 
   await reset();
-  await page.evaluate(() =>
-    window.fixture.add("blue", (r) => r.color.eq("blue")),
-  );
+  await page.evaluate(() => window.fixture.add("blue", (r) => r.color.eq("blue")));
   await pending("blue");
   await page.evaluate(() => window.fixture.apply(0));
   await rows("blue", ["A", "B"]);
@@ -317,28 +285,13 @@ try {
   });
   await rows("pk", ["A"]);
   await rows("duplicate", ["A"]);
-  assert.equal(
-    await count(),
-    2,
-    "cached PK readers still establish one shared subscription",
-  );
-  assert.equal(
-    await page.evaluate(() => window.fixture.registrations[1].active),
-    false,
-  );
+  assert.equal(await count(), 2, "cached PK readers still establish one shared subscription");
+  assert.equal(await page.evaluate(() => window.fixture.registrations[1].active), false);
   await page.evaluate(() => window.fixture.remove("blue"));
-  assert.equal(
-    await page.evaluate(() => window.fixture.registrations[0].unsubscribed),
-    false,
-  );
+  assert.equal(await page.evaluate(() => window.fixture.registrations[0].unsubscribed), false);
   await page.evaluate(() => window.fixture.apply(1));
-  assert.equal(
-    await page.evaluate(() => window.fixture.registrations[0].unsubscribed),
-    true,
-  );
-  await page.evaluate(() =>
-    window.fixture.update("A", "Changed after handoff"),
-  );
+  assert.equal(await page.evaluate(() => window.fixture.registrations[0].unsubscribed), true);
+  await page.evaluate(() => window.fixture.update("A", "Changed after handoff"));
   await page.waitForFunction(() =>
     document.getElementById("pk").textContent.includes("Changed after handoff"),
   );
@@ -348,8 +301,7 @@ try {
   });
   await page.waitForFunction(
     () =>
-      window.fixture.registrations[1].unsubscribed &&
-      window.fixture.listeners.update.size === 0,
+      window.fixture.registrations[1].unsubscribed && window.fixture.listeners.update.size === 0,
   );
   console.log(
     "PASS: cached primary-key rows load before acknowledgement, pin their suppliers, share pending queries, hand over to their own subscription, and clean up.",
@@ -357,31 +309,22 @@ try {
 
   for (const unique of ["metadata", "constraint"]) {
     await reset();
-    await page.evaluate(() =>
-      window.fixture.add("blue", (r) => r.color.eq("blue")),
-    );
+    await page.evaluate(() => window.fixture.add("blue", (r) => r.color.eq("blue")));
     await pending("blue");
     await page.evaluate(() => window.fixture.apply(0));
     await rows("blue", ["A", "B"]);
     await page.evaluate(
-      (unique) =>
-        window.fixture.add("unique", (r) => r.title.eq("One"), unique),
+      (unique) => window.fixture.add("unique", (r) => r.title.eq("One"), unique),
       unique,
     );
     await rows("unique", ["A"]);
     assert.equal(await count(), 2);
-    assert.equal(
-      await page.evaluate(() => window.fixture.registrations[1].active),
-      false,
-    );
+    assert.equal(await page.evaluate(() => window.fixture.registrations[1].active), false);
     await page.evaluate(() => {
       window.fixture.remove("blue");
       window.fixture.apply(1);
     });
-    assert.equal(
-      await page.evaluate(() => window.fixture.registrations[0].unsubscribed),
-      true,
-    );
+    assert.equal(await page.evaluate(() => window.fixture.registrations[0].unsubscribed), true);
     await page.evaluate(() => window.fixture.update("A", "No longer matches"));
     await rows("unique", []);
   }
@@ -390,9 +333,7 @@ try {
   );
 
   await reset();
-  await page.evaluate(() =>
-    window.fixture.add("blue", (r) => r.color.eq("blue")),
-  );
+  await page.evaluate(() => window.fixture.add("blue", (r) => r.color.eq("blue")));
   await pending("blue");
   await page.evaluate(() => window.fixture.apply(0));
   await rows("blue", ["A", "B"]);
@@ -400,10 +341,7 @@ try {
     window.fixture.add("filtered", (r) => r.id.eq("A").and(r.color.eq("red"))),
   );
   await rows("filtered", []);
-  assert.equal(
-    await page.evaluate(() => window.fixture.registrations[1].active),
-    false,
-  );
+  assert.equal(await page.evaluate(() => window.fixture.registrations[1].active), false);
   await page.evaluate(() => {
     window.fixture.remove("blue");
     window.fixture.apply(1);
@@ -415,9 +353,7 @@ try {
   );
 
   await reset();
-  await page.evaluate(() =>
-    window.fixture.add("blue", (r) => r.color.eq("blue")),
-  );
+  await page.evaluate(() => window.fixture.add("blue", (r) => r.color.eq("blue")));
   await pending("blue");
   await page.evaluate(() => window.fixture.apply(0));
   await rows("blue", ["A", "B"]);
@@ -425,9 +361,7 @@ try {
     window.fixture.add("union", (r) => r.id.eq("A").or(r.id.eq("B")));
     window.fixture.add("missing", (r) => r.id.eq("A").or(r.id.eq("C")));
     window.fixture.add("unbounded", (r) => r.id.eq("A").or(r.color.eq("red")));
-    window.fixture.add("contradictory", (r) =>
-      r.id.eq("A").or(r.id.eq("B").and(r.id.eq("C"))),
-    );
+    window.fixture.add("contradictory", (r) => r.id.eq("A").or(r.id.eq("B").and(r.id.eq("C"))));
   });
   await rows("union", ["A", "B"]);
   await rows("contradictory", ["A"]);
@@ -448,37 +382,25 @@ try {
   await pending("a");
   await page.evaluate(() => window.fixture.apply(0));
   await rows("a", ["A"]);
-  await page.evaluate(() =>
-    window.fixture.add("nonunique", (r) => r.color.eq("blue")),
-  );
+  await page.evaluate(() => window.fixture.add("nonunique", (r) => r.color.eq("blue")));
   await pending("nonunique");
   await page.evaluate(() => window.fixture.apply(1));
   await rows("nonunique", ["A", "B"]);
-  console.log(
-    "PASS: seeing a nonunique match never implies a complete result.",
-  );
+  console.log("PASS: seeing a nonunique match never implies a complete result.");
 
   for (const failing of [0, 1]) {
     await reset();
-    await page.evaluate(() =>
-      window.fixture.add("blue", (r) => r.color.eq("blue")),
-    );
+    await page.evaluate(() => window.fixture.add("blue", (r) => r.color.eq("blue")));
     await pending("blue");
     await page.evaluate(() => window.fixture.apply(0));
     await rows("blue", ["A", "B"]);
     await page.evaluate(() => window.fixture.add("pk", (r) => r.id.eq("A")));
     await rows("pk", ["A"]);
     await page.evaluate((index) => window.fixture.error(index), failing);
-    await page
-      .locator("#pk")
-      .filter({ hasText: "Subscription failed" })
-      .waitFor();
+    await page.locator("#pk").filter({ hasText: "Subscription failed" }).waitFor();
     if (failing === 0) {
       await page.evaluate(() => window.fixture.apply(1));
-      assert.equal(
-        await page.evaluate(() => window.fixture.registrations[1].unsubscribed),
-        true,
-      );
+      assert.equal(await page.evaluate(() => window.fixture.registrations[1].unsubscribed), true);
     }
   }
   console.log(
@@ -486,9 +408,7 @@ try {
   );
 
   await reset();
-  await page.evaluate(() =>
-    window.fixture.add("blue", (r) => r.color.eq("blue")),
-  );
+  await page.evaluate(() => window.fixture.add("blue", (r) => r.color.eq("blue")));
   await pending("blue");
   await page.evaluate(() => window.fixture.apply(0));
   await rows("blue", ["A", "B"]);
@@ -503,14 +423,10 @@ try {
   await page.waitForFunction(() =>
     document.getElementById("pk").textContent.includes("Still subscribed"),
   );
-  console.log(
-    "PASS: once handoff completes, supplier errors no longer affect the new reader.",
-  );
+  console.log("PASS: once handoff completes, supplier errors no longer affect the new reader.");
 
   await reset();
-  await page.evaluate(() =>
-    window.fixture.add("blue", (r) => r.color.eq("blue")),
-  );
+  await page.evaluate(() => window.fixture.add("blue", (r) => r.color.eq("blue")));
   await pending("blue");
   await page.evaluate(() => window.fixture.apply(0));
   await rows("blue", ["A", "B"]);

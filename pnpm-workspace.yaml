@@ -1,0 +1,15 @@
+overrides:
+  solid-js: 2.0.0-rc.14
+  "@solidjs/web": 2.0.0-rc.14
+  "@solidjs/signals": 2.0.0-rc.14
+  "@solidjs/babel-plugin": 2.0.0-rc.14
+  "@solidjs/compiler": 2.0.0-rc.14
+  vite@*: "catalog:"
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@1.1.0
+  vite-plus: 1.1.0
+peerDependencyRules:
+  allowAny:
+    - vite
+  allowedVersions:
+    vite: "*"

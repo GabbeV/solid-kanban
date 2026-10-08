@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { chromium, firefox } from "@playwright/test";
+import assert from "node:assert/strict";
 
 for (const type of [chromium, firefox]) {
   const browser = await type.launch();
@@ -15,13 +15,11 @@ for (const type of [chromium, firefox]) {
     );
     await page.goto("http://127.0.0.1:3002/__subscriptions");
     await page.waitForFunction(() => !!window.fixture);
-    const count = () =>
-      page.evaluate(() => window.fixture.registrations.length);
+    const count = () => page.evaluate(() => window.fixture.registrations.length);
     const value = (id) => page.locator(`#${id}`).innerText();
     const waitRows = (id, title = "One") =>
       page.waitForFunction(
-        ({ id, title }) =>
-          document.getElementById(id)?.textContent.includes(title),
+        ({ id, title }) => document.getElementById(id)?.textContent.includes(title),
         { id, title },
       );
     await page.evaluate(() => window.fixture.add("existing"));
@@ -41,22 +39,12 @@ for (const type of [chromium, firefox]) {
     await page.waitForFunction(() => window.fixture.reducerCalls.length === 1);
     await page.evaluate(() => window.fixture.disconnect());
     await page.waitForFunction(() => window.firstMove !== "pending");
-    assert.match(
-      await page.evaluate(() => window.firstMove),
-      /outcome is unknown/,
-    );
+    assert.match(await page.evaluate(() => window.firstMove), /outcome is unknown/);
     assert.equal(await value("existing"), snapshot);
-    assert.equal(
-      await page.evaluate(() => window.fixture.listeners.update.size),
-      0,
-    );
+    assert.equal(await page.evaluate(() => window.fixture.listeners.update.size), 0);
     await page.evaluate(() => window.fixture.add("new"));
     assert.equal(await value("new"), "Pending");
-    assert.equal(
-      await count(),
-      1,
-      "Do not subscribe through the disconnected session",
-    );
+    assert.equal(await count(), 1, "Do not subscribe through the disconnected session");
     await page.evaluate(() => window.fixture.add("disposed"));
     await page.evaluate(() => window.fixture.remove("disposed"));
 
@@ -83,10 +71,7 @@ for (const type of [chromium, firefox]) {
       window.offlineMove = "pending";
       void window.fixture.move().then(() => (window.offlineMove = "saved"));
     });
-    assert.equal(
-      await page.evaluate(() => window.fixture.reducerCalls.length),
-      1,
-    );
+    assert.equal(await page.evaluate(() => window.fixture.reducerCalls.length), 1);
     // Another failed connection attempt must not strand calls awaiting readiness.
     await page.evaluate(() => window.fixture.disconnect());
     await page.evaluate(() => window.fixture.add("pending"));
@@ -96,10 +81,7 @@ for (const type of [chromium, firefox]) {
     await page.evaluate(() => window.fixture.reducerCalls[1].resolve());
     await page.waitForFunction(() => window.offlineMove === "saved");
     await page.evaluate(() => window.fixture.reducerCalls[0].resolve());
-    assert.match(
-      await page.evaluate(() => window.firstMove),
-      /outcome is unknown/,
-    );
+    assert.match(await page.evaluate(() => window.firstMove), /outcome is unknown/);
     assert.equal(await value("pending"), "Pending");
     await page.evaluate(() => window.fixture.disconnect());
     await page.evaluate(() => window.fixture.reconnect());
@@ -113,14 +95,8 @@ for (const type of [chromium, firefox]) {
     await page.evaluate(() =>
       ["existing", "new", "pending"].forEach((id) => window.fixture.remove(id)),
     );
-    assert.equal(
-      await page.evaluate(() => window.fixture.listeners.update.size),
-      0,
-    );
-    assert.equal(
-      await page.evaluate(() => window.fixture.registrations[3].unsubscribed),
-      true,
-    );
+    assert.equal(await page.evaluate(() => window.fixture.listeners.update.size), 0);
+    assert.equal(await page.evaluate(() => window.fixture.registrations[3].unsubscribed), true);
     assert.deepEqual(errors, []);
     console.log(
       `PASS ${type.name()}: retained snapshots, offline mounts, pending restoration, repeated reconnects, obsolete callbacks and cleanup.`,

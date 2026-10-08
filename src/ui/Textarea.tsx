@@ -1,7 +1,9 @@
-import { css } from "@csslit/core";
 import type { JSX } from "@solidjs/web";
+
+import { css } from "@csslit/core";
 import { omit } from "solid-js";
-import { colors, radius, control, lineHeight } from "#/theme.ts";
+
+import { colors, control, lineHeight, radius } from "#/theme.ts";
 
 export function Textarea(
   props: Omit<JSX.TextareaHTMLAttributes<HTMLTextAreaElement>, "class"> & {

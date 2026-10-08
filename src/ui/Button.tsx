@@ -1,18 +1,13 @@
-import { css } from "@csslit/core";
-import { dynamic, type JSX } from "@solidjs/web";
-import { useNavigate } from "@solidjs/router";
-import { action, createOptimistic, omit } from "solid-js";
-import {
-  colors,
-  radius,
-  buttonPad,
-  buttonText,
-  lineHeight,
-  space,
-} from "#/theme.ts";
+import type { JSX } from "@solidjs/web";
 
-export type ButtonVariant =
-  "default" | "primary" | "danger" | "ghost" | "danger-ghost" | "text";
+import { css } from "@csslit/core";
+import { useNavigate } from "@solidjs/router";
+import { dynamic } from "@solidjs/web";
+import { action, createOptimistic, omit } from "solid-js";
+
+import { buttonPad, buttonText, colors, lineHeight, radius, space } from "#/theme.ts";
+
+export type ButtonVariant = "default" | "primary" | "danger" | "ghost" | "danger-ghost" | "text";
 export type ButtonPad = keyof typeof buttonPad;
 export type ButtonFont = keyof typeof buttonText | "inherit";
 export type ButtonBleed =
@@ -59,10 +54,7 @@ export function Button(props: ButtonProps) {
     if (props.href !== undefined) return;
     setPending(true);
     const handler = props.onClick;
-    const result =
-      typeof handler === "function"
-        ? handler(event)
-        : handler?.[0](handler[1], event);
+    const result = typeof handler === "function" ? handler(event) : handler?.[0](handler[1], event);
     const button = event.currentTarget;
     if (!event.defaultPrevented && button.type === "submit" && button.form) {
       // Start the native submit (including validation) in the flag's update,
@@ -78,10 +70,7 @@ export function Button(props: ButtonProps) {
     if (props.href === undefined) return;
     setPending(true);
     const handler = props.onClick;
-    const result =
-      typeof handler === "function"
-        ? handler(event)
-        : handler?.[0](handler[1], event);
+    const result = typeof handler === "function" ? handler(event) : handler?.[0](handler[1], event);
     const anchor = event.currentTarget;
     const url = new URL(anchor.href);
     if (
@@ -115,41 +104,19 @@ export function Button(props: ButtonProps) {
   const elementProps = () =>
     props.href === undefined
       ? {
-          ...omit(
-            props,
-            "variant",
-            "pad",
-            "font",
-            "align",
-            "iconOnly",
-            "bleed",
-            "onClick",
-          ),
+          ...omit(props, "variant", "pad", "font", "align", "iconOnly", "bleed", "onClick"),
           onClick: buttonClick,
           type: props.type ?? "button",
         }
       : {
-          ...omit(
-            props,
-            "variant",
-            "pad",
-            "font",
-            "align",
-            "iconOnly",
-            "bleed",
-            "onClick",
-          ),
+          ...omit(props, "variant", "pad", "font", "align", "iconOnly", "bleed", "onClick"),
           onClick: anchorClick,
         };
   const variant = () => props.variant ?? "default";
   const borderless = () =>
-    variant() === "ghost" ||
-    variant() === "danger-ghost" ||
-    variant() === "text";
-  const padKey = (): ButtonPad =>
-    props.pad ?? (variant() === "text" ? "xs" : "md");
-  const fontKey = (): ButtonFont =>
-    props.font ?? (variant() === "text" ? "inherit" : "control");
+    variant() === "ghost" || variant() === "danger-ghost" || variant() === "text";
+  const padKey = (): ButtonPad => props.pad ?? (variant() === "text" ? "xs" : "md");
+  const fontKey = (): ButtonFont => props.font ?? (variant() === "text" ? "inherit" : "control");
   const bleeds = (direction: ButtonBleed) =>
     props.bleed === true ||
     props.bleed === direction ||
@@ -259,8 +226,7 @@ export function Button(props: ButtonProps) {
             color: ${colors.danger};
 
             &[aria-pressed="true"],
-            body:not(:has([data-dragging]))
-              &[aria-pressed="true"]:hover:not(:disabled) {
+            body:not(:has([data-dragging])) &[aria-pressed="true"]:hover:not(:disabled) {
               background: ${colors.dangerSurface};
               border-color: ${colors.dangerBorder};
             }
@@ -313,38 +279,26 @@ export function Button(props: ButtonProps) {
           `,
         props.iconOnly &&
           css`
-            width: calc(
-              9px + 2 * (var(--button-padding) + var(--button-border))
-            );
-            height: calc(
-              9px + 2 * (var(--button-padding) + var(--button-border))
-            );
+            width: calc(9px + 2 * (var(--button-padding) + var(--button-border)));
+            height: calc(9px + 2 * (var(--button-padding) + var(--button-border)));
             display: inline-grid;
             place-items: center;
           `,
         (bleeds("block") || bleeds("block-start")) &&
           css`
-            margin-block-start: calc(
-              -1 * (var(--button-padding) + var(--button-border))
-            );
+            margin-block-start: calc(-1 * (var(--button-padding) + var(--button-border)));
           `,
         (bleeds("block") || bleeds("block-end")) &&
           css`
-            margin-block-end: calc(
-              -1 * (var(--button-padding) + var(--button-border))
-            );
+            margin-block-end: calc(-1 * (var(--button-padding) + var(--button-border)));
           `,
         (bleeds("inline") || bleeds("inline-start")) &&
           css`
-            margin-inline-start: calc(
-              -1 * (var(--button-padding) + var(--button-border))
-            );
+            margin-inline-start: calc(-1 * (var(--button-padding) + var(--button-border)));
           `,
         (bleeds("inline") || bleeds("inline-end")) &&
           css`
-            margin-inline-end: calc(
-              -1 * (var(--button-padding) + var(--button-border))
-            );
+            margin-inline-end: calc(-1 * (var(--button-padding) + var(--button-border)));
           `,
         pending() &&
           borderless() &&

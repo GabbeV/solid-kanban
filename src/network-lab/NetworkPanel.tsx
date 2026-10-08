@@ -1,13 +1,14 @@
+import type { NetworkLab, NetworkSettings } from "#/network-lab/core.ts";
+
 import { css } from "@csslit/core";
 import { Show, createSignal, onCleanup, onSettled } from "solid-js";
+
+import { NetworkControls } from "#/network-lab/NetworkControls.tsx";
+import { NetworkTimeline } from "#/network-lab/NetworkTimeline.tsx";
+import { saveNetworkSettings } from "#/network-lab/settings.ts";
+import { breakpoints, colors, fontSize, networkLab, space } from "#/theme.ts";
 import { Button } from "#/ui/Button.tsx";
 import { Icon } from "#/ui/Icon.tsx";
-import { colors, fontSize, space, breakpoints, networkLab } from "#/theme.ts";
-import type { NetworkLab, NetworkSettings } from "./core.ts";
-import { saveNetworkSettings } from "./settings.ts";
-
-import { NetworkControls } from "./NetworkControls";
-import { NetworkTimeline } from "./NetworkTimeline";
 
 // Borders (2), header (56), content padding (22), axis (8), gap (8),
 // and exactly two channel rows. The wrapped header adds a 25px row + 12px gap.
@@ -44,18 +45,10 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
   const [size, setSize] = createSignal<{ height: number; width?: number }>(
     () => {
       try {
-        const saved = JSON.parse(
-          localStorage.getItem(sizeStorageKey) ?? "null",
-        );
+        const saved = JSON.parse(localStorage.getItem(sizeStorageKey) ?? "null");
         return {
-          height:
-            Number.isFinite(saved?.height) && saved.height > 0
-              ? saved.height
-              : 240,
-          width:
-            Number.isFinite(saved?.width) && saved.width > 0
-              ? saved.width
-              : undefined,
+          height: Number.isFinite(saved?.height) && saved.height > 0 ? saved.height : 240,
+          width: Number.isFinite(saved?.width) && saved.width > 0 ? saved.width : undefined,
         };
       } catch {
         return { height: 240 };
@@ -66,10 +59,7 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
   let resizeStart:
     | { x: number; y: number; height: number; width: number; corner: boolean }
     | undefined;
-  const startResize = (
-    event: PointerEvent & { currentTarget: HTMLElement },
-    corner: boolean,
-  ) => {
+  const startResize = (event: PointerEvent & { currentTarget: HTMLElement }, corner: boolean) => {
     if (event.button !== 0) return;
     event.preventDefault();
     const bounds = event.currentTarget.parentElement!.getBoundingClientRect();
@@ -90,18 +80,12 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
     setSize({
       height: Math.max(
         Math.min(minimumHeight, availableHeight),
-        Math.min(
-          availableHeight,
-          resizeStart.height + resizeStart.y - event.clientY,
-        ),
+        Math.min(availableHeight, resizeStart.height + resizeStart.y - event.clientY),
       ),
       width: resizeStart.corner
         ? Math.max(
             Math.min(360, availableWidth),
-            Math.min(
-              availableWidth,
-              resizeStart.width + resizeStart.x - event.clientX,
-            ),
+            Math.min(availableWidth, resizeStart.width + resizeStart.x - event.clientX),
           )
         : size().width,
     });
@@ -157,8 +141,7 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
         open()
           ? {
               height: `${size().height}px`,
-              width:
-                size().width === undefined ? undefined : `${size().width}px`,
+              width: size().width === undefined ? undefined : `${size().width}px`,
             }
           : undefined
       }
@@ -195,10 +178,7 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
             flex-direction: column;
             container-type: inline-size;
             --network-lab-min-height: ${minimumHeight}px;
-            min-height: min(
-              var(--network-lab-min-height),
-              calc(100% - ${2 * space.lg}px)
-            );
+            min-height: min(var(--network-lab-min-height), calc(100% - ${2 * space.lg}px));
             max-height: calc(100% - ${2 * space.lg}px);
             border-radius: ${space.lg}px;
 
@@ -207,10 +187,7 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
             }
             @media (max-width: ${breakpoints.phone}px) {
               left: ${space.sm}px;
-              min-height: min(
-                var(--network-lab-min-height),
-                calc(100% - ${2 * space.sm}px)
-              );
+              min-height: min(var(--network-lab-min-height), calc(100% - ${2 * space.sm}px));
               max-height: calc(100% - ${2 * space.sm}px);
             }
           `,

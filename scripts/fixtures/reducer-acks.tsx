@@ -1,11 +1,8 @@
-import { Loading, action } from "solid-js";
 import { render } from "@solidjs/web";
-import { DbConnection, tables } from "../../src/module_bindings/index";
-import {
-  SpacetimeDBProvider,
-  useReducers,
-  useRow,
-} from "../../src/spacetimedb";
+import { Loading, action } from "solid-js";
+
+import { DbConnection, tables } from "#/module_bindings/index.ts";
+import { SpacetimeDBProvider, useReducers, useRow } from "#/spacetimedb.tsx";
 
 const boardId = new URL(location.href).searchParams.get("board")!;
 const builder = DbConnection.builder()

@@ -1,20 +1,24 @@
+import type { RouteDefinition } from "@solidjs/router";
+import type { ParentProps } from "solid-js";
+
 import { css } from "@csslit/core";
-import { Layout } from "#/Layout.tsx";
-import { colors, fontSize, lineHeight, space } from "#/theme.ts";
-import { BoardHeader } from "#/board/BoardHeader.tsx";
-import { Board } from "#/board/Board.tsx";
+import { useLocation, useNavigate, useParams } from "@solidjs/router";
+import { createRouter } from "@solidjs/router";
+import { Show } from "solid-js";
+
 import { Activity } from "#/board/Activity.tsx";
 import { Archive } from "#/board/Archive.tsx";
-import { Show, type ParentProps } from "solid-js";
-import { useLocation, useNavigate, useParams } from "@solidjs/router";
-import { createRouter, type RouteDefinition } from "@solidjs/router";
+import { Board } from "#/board/Board.tsx";
+import { BoardHeader } from "#/board/BoardHeader.tsx";
+import { AddBoardDialog } from "#/board/dialogs/AddBoardDialog.tsx";
+import { EditBoardDialog } from "#/board/dialogs/EditBoardDialog.tsx";
+import { EditNameDialog } from "#/board/dialogs/EditNameDialog.tsx";
+import { LaneDialog } from "#/board/dialogs/LaneDialog.tsx";
+import { Layout } from "#/Layout.tsx";
 import { tables } from "#/module_bindings/index.ts";
-import { useRow, useTable } from "#/spacetimedb.tsx";
 import { closeDialog } from "#/nav.ts";
-import { EditBoardDialog } from "./board/dialogs/EditBoardDialog";
-import { LaneDialog } from "./board/dialogs/LaneDialog";
-import { EditNameDialog } from "./board/dialogs/EditNameDialog";
-import { AddBoardDialog } from "./board/dialogs/AddBoardDialog";
+import { useRow, useTable } from "#/spacetimedb.tsx";
+import { colors, fontSize, lineHeight, space } from "#/theme.ts";
 
 function useClose(fallbackPath?: string) {
   const location = useLocation<{ dialogOpenedFromApp: true }>();
@@ -47,13 +51,7 @@ function EditLaneDialogRoute() {
   );
   return (
     <Show when={lane()}>
-      {(item) => (
-        <LaneDialog
-          lane={item()}
-          boardId={params.boardId ?? "studio"}
-          onClose={close}
-        />
-      )}
+      {(item) => <LaneDialog lane={item()} boardId={params.boardId ?? "studio"} onClose={close} />}
     </Show>
   );
 }

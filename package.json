@@ -4,19 +4,12 @@
   "private": true,
   "type": "module",
   "imports": {
+    "#/server/*": "./spacetimedb/src/*",
+    "#/dist/*": "./dist/*",
     "#/*": "./src/*"
   },
-  "packageManager": "pnpm@10.32.1",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "build": "vite build",
-    "start": "node scripts/start.mjs",
-    "typecheck": "tsc --noEmit",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "db:start": "node scripts/database.mjs start",
-    "db:publish": "node scripts/database.mjs publish",
-    "db:generate": "node scripts/database.mjs generate"
+    "prepare": "vp config"
   },
   "dependencies": {
     "@csslit/core": "0.0.13",
@@ -32,18 +25,10 @@
     "@solidjs/compiler": "2.0.0-rc.14",
     "@solidjs/vite-plugin": "3.0.0-next.47",
     "@types/node": "^24.0.0",
-    "prettier": "3.9.8",
     "typescript": "^6.0.0",
-    "vite": "8.3.0",
-    "vite-plugin-inspect": "^11.4.1"
+    "vite": "catalog:",
+    "vite-plugin-inspect": "^11.4.1",
+    "vite-plus": "catalog:"
   },
-  "pnpm": {
-    "overrides": {
-      "solid-js": "2.0.0-rc.14",
-      "@solidjs/web": "2.0.0-rc.14",
-      "@solidjs/signals": "2.0.0-rc.14",
-      "@solidjs/babel-plugin": "2.0.0-rc.14",
-      "@solidjs/compiler": "2.0.0-rc.14"
-    }
-  }
+  "packageManager": "pnpm@10.32.1"
 }

@@ -1,7 +1,9 @@
-import { css } from "@csslit/core";
 import type { JSX } from "@solidjs/web";
+
+import { css } from "@csslit/core";
 import { omit } from "solid-js";
-import { space, fontSize, colors } from "#/theme.ts";
+
+import { colors, fontSize, space } from "#/theme.ts";
 
 export function Field(
   props: Omit<JSX.LabelHTMLAttributes<HTMLLabelElement>, "class"> & {

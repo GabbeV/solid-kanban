@@ -1,24 +1,25 @@
+import type * as db from "#/module_bindings/types.ts";
+
 import { css } from "@csslit/core";
 import { useLocation, useNavigate } from "@solidjs/router";
-import { createOptimistic, Errored, Loading, For } from "solid-js";
-import { breakpoints, colors, fontSize, lineHeight, space } from "./theme";
-import { Avatar } from "./ui/Avatar.tsx";
-import { Button } from "./ui/Button";
-import { Icon } from "./ui/Icon";
-import { Notice } from "./ui/Notice";
-import { tables } from "./module_bindings/index.ts";
-import { useTable } from "./spacetimedb.tsx";
-import { openDialog } from "./nav";
-import { useName } from "./name";
+import { Errored, For, Loading, createOptimistic } from "solid-js";
+
+import { tables } from "#/module_bindings/index.ts";
+import { useName } from "#/name.tsx";
+import { openDialog } from "#/nav.ts";
+import { useTable } from "#/spacetimedb.tsx";
+import { breakpoints, colors, fontSize, lineHeight, space } from "#/theme.ts";
+import { Avatar } from "#/ui/Avatar.tsx";
+import { Button } from "#/ui/Button.tsx";
+import { Icon } from "#/ui/Icon.tsx";
+import { Notice } from "#/ui/Notice.tsx";
 
 export function Sidebar() {
   const { name } = useName();
   const boards = useTable(() => tables.board);
   const location = useLocation();
   const navigate = useNavigate();
-  const [current, setCurrent] = createOptimistic(
-    () => location.pathname.split("/")[2] ?? "studio",
-  );
+  const [current, setCurrent] = createOptimistic(() => location.pathname.split("/")[2] ?? "studio");
   return (
     <aside
       class={css`
@@ -56,30 +57,9 @@ export function Sidebar() {
         aria-label="Current home"
       >
         <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
-          <rect
-            x="12"
-            y="2"
-            width="18"
-            height="7"
-            rx="2"
-            fill={colors.skyDot}
-          />
-          <rect
-            x="7"
-            y="12"
-            width="18"
-            height="7"
-            rx="2"
-            fill={colors.accent}
-          />
-          <rect
-            x="2"
-            y="22"
-            width="18"
-            height="7"
-            rx="2"
-            fill={colors.primary}
-          />
+          <rect x="12" y="2" width="18" height="7" rx="2" fill={colors.skyDot} />
+          <rect x="7" y="12" width="18" height="7" rx="2" fill={colors.accent} />
+          <rect x="2" y="22" width="18" height="7" rx="2" fill={colors.primary} />
         </svg>
         <span>Current</span>
       </a>
@@ -158,43 +138,11 @@ export function Sidebar() {
             >
               <For each={boards()} keyed={(board) => board.id}>
                 {(board) => (
-                  <Button
-                    variant="ghost"
-                    pad="sm"
-                    align="start"
-                    href={`/b/${board().id}`}
-                    onClick={() => setCurrent(board().id)}
-                    aria-current={current() === board().id ? "page" : undefined}
-                  >
-                    <span
-                      class={[
-                        css`
-                          width: 9px;
-                          height: 9px;
-                          border-radius: 3px;
-                          background: ${colors.accent};
-                          flex: 0 0 auto;
-                        `,
-                        board().color === "orange" &&
-                          css`
-                            background: ${colors.orangeDot};
-                          `,
-                      ]}
-                    />
-                    <span
-                      class={css`
-                        min-width: 0;
-                        white-space: normal;
-                        overflow-wrap: anywhere;
-                        line-height: ${lineHeight.control}px;
-                        @media (max-width: ${breakpoints.compact}px) {
-                          white-space: nowrap;
-                        }
-                      `}
-                    >
-                      {board().title}
-                    </span>
-                  </Button>
+                  <BoardLink
+                    board={board()}
+                    selected={current() === board().id}
+                    onSelect={() => setCurrent(board().id)}
+                  />
                 )}
               </For>
             </Loading>
@@ -247,5 +195,47 @@ export function Sidebar() {
         </Button>
       </div>
     </aside>
+  );
+}
+
+function BoardLink(props: { board: db.Board; selected: boolean; onSelect: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      pad="sm"
+      align="start"
+      href={`/b/${props.board.id}`}
+      onClick={props.onSelect}
+      aria-current={props.selected ? "page" : undefined}
+    >
+      <span
+        class={[
+          css`
+            width: 9px;
+            height: 9px;
+            border-radius: 3px;
+            background: ${colors.accent};
+            flex: 0 0 auto;
+          `,
+          props.board.color === "orange" &&
+            css`
+              background: ${colors.orangeDot};
+            `,
+        ]}
+      />
+      <span
+        class={css`
+          min-width: 0;
+          white-space: normal;
+          overflow-wrap: anywhere;
+          line-height: ${lineHeight.control}px;
+          @media (max-width: ${breakpoints.compact}px) {
+            white-space: nowrap;
+          }
+        `}
+      >
+        {props.board.title}
+      </span>
+    </Button>
   );
 }

@@ -1,16 +1,13 @@
-type Executor<T> = (
-  resolve: (value: T) => void,
-  reject: (reason?: unknown) => void,
-) => void;
+type Executor<T> = (resolve: (value: T) => void, reject: (reason?: unknown) => void) => void;
 
 const PENDING = 0;
 const ADOPTING = 1;
 const FULFILLED = 2;
 const REJECTED = 3;
 
-type State =
-  typeof PENDING | typeof ADOPTING | typeof FULFILLED | typeof REJECTED;
+type State = typeof PENDING | typeof ADOPTING | typeof FULFILLED | typeof REJECTED;
 
+// oxlint-disable-next-line typescript/unbound-method -- Called with its Promise receiver via .call below.
 const promiseThen = Promise.prototype.then;
 
 export class SyncPromise<T> implements PromiseLike<Awaited<T>> {
@@ -71,9 +68,7 @@ export class SyncPromise<T> implements PromiseLike<Awaited<T>> {
 
       try {
         if (parent.#state === FULFILLED) {
-          this.resolve(
-            (onFulfilled ? onFulfilled(parent.#data) : parent.#data) as T,
-          );
+          this.resolve((onFulfilled ? onFulfilled(parent.#data) : parent.#data) as T);
         } else if (onRejected) {
           this.resolve(onRejected(parent.#data) as T);
         } else {
@@ -123,31 +118,21 @@ export class SyncPromise<T> implements PromiseLike<Awaited<T>> {
     return promise;
   }
 
+  // oxlint-disable-next-line unicorn/no-thenable -- Synchronous PromiseLike delivery is this adapter's purpose.
   then<TResult1 = Awaited<T>, TResult2 = never>(
-    onFulfilled?:
-      ((value: Awaited<T>) => TResult1 | PromiseLike<TResult1>) | null,
+    onFulfilled?: ((value: Awaited<T>) => TResult1 | PromiseLike<TResult1>) | null,
     onRejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): SyncPromise<TResult1 | TResult2> {
-    return new SyncPromise.#Continuation<TResult1 | TResult2>(
-      this,
-      onFulfilled,
-      onRejected,
-    );
+    return new SyncPromise.#Continuation<TResult1 | TResult2>(this, onFulfilled, onRejected);
   }
 
   #adopt(value: unknown): void {
     if (value === this) {
-      this.#settle(
-        REJECTED,
-        new TypeError("A promise cannot resolve to itself"),
-      );
+      this.#settle(REJECTED, new TypeError("A promise cannot resolve to itself"));
       return;
     }
 
-    if (
-      value === null ||
-      (typeof value !== "object" && typeof value !== "function")
-    ) {
+    if (value === null || (typeof value !== "object" && typeof value !== "function")) {
       this.#settle(FULFILLED, value);
       return;
     }

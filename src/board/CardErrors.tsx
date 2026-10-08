@@ -1,24 +1,19 @@
+import type { CardFailure, CardState, ViewCard } from "#/board/card-state.ts";
+
 import { css } from "@csslit/core";
 import { For, Show } from "solid-js";
-import type { CardFailure, CardState, ViewCard } from "./card-state";
+
+import { colors, fontSize, lineHeight, radius, space } from "#/theme.ts";
 import { Button } from "#/ui/Button.tsx";
 import { Icon } from "#/ui/Icon.tsx";
-import { colors, fontSize, lineHeight, radius, space } from "#/theme.ts";
 
-export function CardErrors(props: {
-  card: ViewCard;
-  cardState?: CardState;
-  variant?: "notice";
-}) {
+export function CardErrors(props: { card: ViewCard; cardState?: CardState; variant?: "notice" }) {
   const failures = [
     {
       flag: "changes",
       label: "changes",
       message: "Changes not confirmed",
-      visible: () =>
-        props.card.createFailed ||
-        props.card.editFailed ||
-        props.card.moveFailed,
+      visible: () => props.card.createFailed || props.card.editFailed || props.card.moveFailed,
       retry: () =>
         props.card.createFailed
           ? props.cardState?.retryCreateCard(props.card)
@@ -53,9 +48,7 @@ export function CardErrors(props: {
       retry: () => props.cardState?.deleteCard(props.card),
     },
   ] satisfies {
-    flag:
-      | Exclude<CardFailure, "createFailed" | "editFailed" | "moveFailed">
-      | "changes";
+    flag: Exclude<CardFailure, "createFailed" | "editFailed" | "moveFailed"> | "changes";
     label: string;
     message: string;
     visible: () => boolean | undefined;
@@ -135,12 +128,7 @@ export function CardErrors(props: {
                     title={`${failure().flag === "changes" ? "Discard" : "Dismiss"} ${failure().label}`}
                     data-move-action
 
-                    onClick={() =>
-                      props.cardState?.dismissError(
-                        props.card.id,
-                        failure().flag,
-                      )
-                    }
+                    onClick={() => props.cardState?.dismissError(props.card.id, failure().flag)}
                   >
                     <Icon name="close" />
                   </Button>

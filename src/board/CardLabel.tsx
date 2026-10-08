@@ -1,5 +1,6 @@
 import { css } from "@csslit/core";
-import { fontSize, colors, space } from "#/theme.ts";
+
+import { colors, fontSize, space } from "#/theme.ts";
 
 export function CardLabel(props: { label: string }) {
   return (

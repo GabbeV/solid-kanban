@@ -1,5 +1,7 @@
-import { Errored, For, Loading, createSignal } from "solid-js";
+import type { RowExpr, RowTypedQuery } from "spacetimedb";
+
 import { render } from "@solidjs/web";
+import { Errored, For, Loading, createSignal } from "solid-js";
 import {
   ConnectionId,
   evaluateBooleanExpr,
@@ -7,17 +9,12 @@ import {
   getQueryWhereClause,
   makeQueryBuilder,
   schema,
-  table,
   t,
-  type RowExpr,
-  type RowTypedQuery,
+  table,
 } from "spacetimedb";
-import {
-  SpacetimeDBProvider,
-  useReducers,
-  useTable,
-} from "../../src/spacetimedb";
-import { tables } from "../../src/module_bindings/index";
+
+import { tables } from "#/module_bindings/index.ts";
+import { SpacetimeDBProvider, useReducers, useTable } from "#/spacetimedb.tsx";
 
 type Query = Parameters<typeof evaluateBooleanExpr>[0];
 type Row = { id: string; title: string; description: string; color: string };
@@ -75,18 +72,12 @@ const refreshCache = () => {
   cached = initial.filter((row) =>
     registrations.some((entry) => {
       const where = getQueryWhereClause(entry.query);
-      return (
-        entry.active &&
-        !entry.unsubscribed &&
-        (!where || evaluateBooleanExpr(where, row))
-      );
+      return entry.active && !entry.unsubscribed && (!where || evaluateBooleanExpr(where, row));
     }),
   );
 };
 const reducerCalls: { resolve(): void }[] = [];
-const acknowledgments = new Set<
-  (ctx: unknown, row: { sequence: bigint }) => void
->();
+const acknowledgments = new Set<(ctx: unknown, row: { sequence: bigint }) => void>();
 const db = {
   connectionId: new ConnectionId(1n),
   isActive: true,
@@ -105,21 +96,17 @@ const db = {
     reducerAck: {
       onInsert: (callback: (ctx: unknown, row: { sequence: bigint }) => void) =>
         acknowledgments.add(callback),
-      removeOnInsert: (
-        callback: (ctx: unknown, row: { sequence: bigint }) => void,
-      ) => acknowledgments.delete(callback),
+      removeOnInsert: (callback: (ctx: unknown, row: { sequence: bigint }) => void) =>
+        acknowledgments.delete(callback),
     },
     board: {
       iter: () => cached.values(),
       onInsert: (callback: () => void) => listeners.insert.add(callback),
       onUpdate: (callback: () => void) => listeners.update.add(callback),
       onDelete: (callback: () => void) => listeners.delete.add(callback),
-      removeOnInsert: (callback: () => void) =>
-        listeners.insert.delete(callback),
-      removeOnUpdate: (callback: () => void) =>
-        listeners.update.delete(callback),
-      removeOnDelete: (callback: () => void) =>
-        listeners.delete.delete(callback),
+      removeOnInsert: (callback: () => void) => listeners.insert.delete(callback),
+      removeOnUpdate: (callback: () => void) => listeners.update.delete(callback),
+      removeOnDelete: (callback: () => void) => listeners.delete.delete(callback),
     },
   },
   subscriptionBuilder() {
@@ -263,11 +250,7 @@ function Harness() {
   return (
     <For each={readers()} keyed={(reader) => reader.id}>
       {(reader) => (
-        <Errored
-          fallback={(error) => (
-            <output id={reader().id}>{String(error())}</output>
-          )}
-        >
+        <Errored fallback={(error) => <output id={reader().id}>{String(error())}</output>}>
           <Loading fallback={<output id={reader().id}>Pending</output>}>
             <Reader id={reader().id} query={reader().query} />
           </Loading>

@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { chromium, firefox } from "@playwright/test";
+import assert from "node:assert/strict";
 
 for (const type of [chromium, firefox]) {
   const browser = await type.launch();
@@ -11,38 +11,29 @@ for (const type of [chromium, firefox]) {
     const delivered = [];
     const servers = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.routeWebSocket(
-      "ws://127.0.0.1:3002/network-lab-check",
-      (socket) => {
-        servers.push(socket);
-        socket.onMessage((message) => delivered.push(message));
-      },
-    );
+    await page.routeWebSocket("ws://127.0.0.1:3002/network-lab-check", (socket) => {
+      servers.push(socket);
+      socket.onMessage((message) => delivered.push(message));
+    });
     await page.route("**/__network-lab", (route) =>
       route.fulfill({
         contentType: "text/html",
         body: '<!doctype html><html><head><meta name="color-scheme" content="light dark"></head><body><div id="root"></div><script type="module" src="/scripts/fixtures/network-lab.tsx"></script></body></html>',
       }),
     );
-    await page.route("**/network-lab-http-check", (route) =>
-      route.fulfill({ body: "ok" }),
-    );
+    await page.route("**/network-lab-http-check", (route) => route.fulfill({ body: "ok" }));
     const stalled = Promise.withResolvers();
     await page.route("**/network-lab-stall", (route) => {
       stalled.resolve(route);
     });
     await page.goto("http://127.0.0.1:3002/__network-lab");
-    await page.waitForFunction(
-      () => window.networkSocket?.readyState === WebSocket.OPEN,
-    );
+    await page.waitForFunction(() => window.networkSocket?.readyState === WebSocket.OPEN);
     await page.getByRole("button", { name: /^Network lab/ }).click();
 
     const connect = async () => {
       await page.evaluate(() => {
         window.networkLab.configure({ delayMs: 0, jitter: 0, faultRate: 0 });
-        window.networkSocket = new WebSocket(
-          "ws://127.0.0.1:3002/network-lab-check",
-        );
+        window.networkSocket = new WebSocket("ws://127.0.0.1:3002/network-lab-check");
         window.networkSocket.addEventListener("close", (event) => {
           window.lastClose = { code: event.code, reason: event.reason };
         });
@@ -53,9 +44,7 @@ for (const type of [chromium, firefox]) {
           window.networkReceived.push(event.data),
         );
       });
-      await page.waitForFunction(
-        () => window.networkSocket.readyState === WebSocket.OPEN,
-      );
+      await page.waitForFunction(() => window.networkSocket.readyState === WebSocket.OPEN);
       return servers.at(-1);
     };
     // Kill a socket with queued frames, another socket, a fetch in transit,
@@ -79,16 +68,10 @@ for (const type of [chromium, firefox]) {
         (error) => (window.httpQueuedOutcome = error.message),
       );
     });
+    await page.waitForFunction(() => window.networkLab.snapshot().packets.length === 3);
+    await page.getByRole("button", { name: "Kill connections", exact: true }).click();
     await page.waitForFunction(
-      () => window.networkLab.snapshot().packets.length === 3,
-    );
-    await page
-      .getByRole("button", { name: "Kill connections", exact: true })
-      .click();
-    await page.waitForFunction(
-      () =>
-        window.httpOutcome !== "pending" &&
-        window.httpQueuedOutcome !== "pending",
+      () => window.httpOutcome !== "pending" && window.httpQueuedOutcome !== "pending",
     );
     const killed = await page.evaluate(() => ({
       close: window.lastClose,
@@ -109,11 +92,7 @@ for (const type of [chromium, firefox]) {
     assert.deepEqual(delivered, []);
     await stalledRequest.fulfill({ body: "too late" }).catch(() => {});
     await page.evaluate(() => window.networkLab.configure({ delayMs: 0 }));
-    assert.deepEqual(
-      delivered,
-      [],
-      "Killed frames must never leak through later",
-    );
+    assert.deepEqual(delivered, [], "Killed frames must never leak through later");
     console.log(
       `PASS ${type.name()}: kill all sockets/fetches, cancel queued frames, error reason.`,
     );
@@ -125,14 +104,9 @@ for (const type of [chromium, firefox]) {
       exact: true,
     });
     await disconnect.click();
-    await page.waitForFunction(
-      () => window.networkSocket.readyState === WebSocket.CLOSED,
-    );
+    await page.waitForFunction(() => window.networkSocket.readyState === WebSocket.CLOSED);
     assert.equal(await disconnect.getAttribute("aria-pressed"), "true");
-    assert.match(
-      await page.evaluate(() => window.lastError),
-      /kept disconnected/,
-    );
+    assert.match(await page.evaluate(() => window.lastError), /kept disconnected/);
     const countBefore = servers.length;
     await page.evaluate(() => {
       window.blockedConnections = [];
@@ -154,9 +128,7 @@ for (const type of [chromium, firefox]) {
       );
     });
     await page.waitForFunction(
-      () =>
-        window.blockedConnections.length === 2 &&
-        window.httpOutcome !== "pending",
+      () => window.blockedConnections.length === 2 && window.httpOutcome !== "pending",
     );
     const blocked = await page.evaluate(() => ({
       snapshot: window.networkLab.snapshot(),
@@ -167,11 +139,7 @@ for (const type of [chromium, firefox]) {
     assert.equal(blocked.snapshot.disconnected, true);
     assert.equal(blocked.snapshot.packets.length, 0);
     assert.equal(blocked.opens, 0);
-    assert.equal(
-      servers.length,
-      countBefore,
-      "Blocked sockets must not reach the server",
-    );
+    assert.equal(servers.length, countBefore, "Blocked sockets must not reach the server");
     assert.match(blocked.http, /kept disconnected/);
     for (const connection of blocked.connections) {
       assert.equal(connection.code, 4000);
@@ -180,9 +148,7 @@ for (const type of [chromium, firefox]) {
     await page.screenshot({
       path: `/tmp/network-disconnected-${type.name()}.png`,
     });
-    await page
-      .getByRole("button", { name: "Close Network lab", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Close Network lab", exact: true }).click();
     assert.match(
       await page.getByRole("button", { name: /^Network lab/ }).innerText(),
       /Disconnected/,
@@ -193,9 +159,7 @@ for (const type of [chromium, firefox]) {
     assert.equal(await disconnect.getAttribute("aria-pressed"), "false");
     await connect();
     assert.equal(
-      await page.evaluate(async () =>
-        (await fetch("/network-lab-http-check")).text(),
-      ),
+      await page.evaluate(async () => (await fetch("/network-lab-http-check")).text()),
       "ok",
     );
     console.log(
@@ -210,38 +174,25 @@ for (const type of [chromium, firefox]) {
       window.networkLab.configure({ faultRate: 0.1 });
       window.networkSocket.send("survives-at-boundary");
     });
-    await page.waitForFunction(
-      () => window.networkLab.snapshot().packets.length === 0,
-    );
+    await page.waitForFunction(() => window.networkLab.snapshot().packets.length === 0);
     assert.deepEqual(delivered, ["survives-at-boundary"]);
     await page.evaluate(() => {
       window.networkRandom = 0.049;
       window.networkSocket.send("outbound-fault");
     });
-    await page.waitForFunction(
-      () => window.networkSocket.readyState === WebSocket.CLOSED,
-    );
-    assert.match(
-      await page.evaluate(() => window.lastError),
-      /simulated connection fault/,
-    );
+    await page.waitForFunction(() => window.networkSocket.readyState === WebSocket.CLOSED);
+    assert.match(await page.evaluate(() => window.lastError), /simulated connection fault/);
     assert.deepEqual(delivered, ["survives-at-boundary"]);
 
     const inbound = await connect();
     await page.evaluate(() => window.networkLab.configure({ faultRate: 0.1 }));
     inbound.send("inbound-fault");
-    await page.waitForFunction(
-      () => window.networkSocket.readyState === WebSocket.CLOSED,
-    );
+    await page.waitForFunction(() => window.networkSocket.readyState === WebSocket.CLOSED);
     assert.equal(
-      await page.evaluate(() =>
-        window.networkReceived.includes("inbound-fault"),
-      ),
+      await page.evaluate(() => window.networkReceived.includes("inbound-fault")),
       false,
     );
-    console.log(
-      `PASS ${type.name()}: half-rate fault sampling in both WS directions.`,
-    );
+    console.log(`PASS ${type.name()}: half-rate fault sampling in both WS directions.`);
 
     // A 10% HTTP pair has a ~5.13% chance at each leg, not 10% twice or 5% twice.
     await page.evaluate(() => {
@@ -249,9 +200,7 @@ for (const type of [chromium, firefox]) {
       window.networkLab.configure({ faultRate: 0.1 });
     });
     assert.equal(
-      await page.evaluate(async () =>
-        (await fetch("/network-lab-http-check")).text(),
-      ),
+      await page.evaluate(async () => (await fetch("/network-lab-http-check")).text()),
       "ok",
     );
     await page.evaluate(() => {
@@ -263,10 +212,7 @@ for (const type of [chromium, firefox]) {
       );
     });
     await page.waitForFunction(() => window.httpOutcome !== "pending");
-    assert.match(
-      await page.evaluate(() => window.httpOutcome),
-      /simulated connection fault/,
-    );
+    assert.match(await page.evaluate(() => window.httpOutcome), /simulated connection fault/);
     await page.evaluate(() => {
       window.networkRandom = 0.052;
       window.networkLab.configure({ delayMs: 500 });
@@ -277,19 +223,12 @@ for (const type of [chromium, firefox]) {
       );
     });
     await page.waitForFunction(() =>
-      window.networkLab
-        .snapshot()
-        .packets.some((packet) => packet.direction === "in"),
+      window.networkLab.snapshot().packets.some((packet) => packet.direction === "in"),
     );
     await page.evaluate(() => (window.networkRandom = 0.051));
     await page.waitForFunction(() => window.httpOutcome !== "pending");
-    assert.match(
-      await page.evaluate(() => window.httpOutcome),
-      /simulated connection fault/,
-    );
-    console.log(
-      `PASS ${type.name()}: calibrated 10% HTTP pair rate on both legs.`,
-    );
+    assert.match(await page.evaluate(() => window.httpOutcome), /simulated connection fault/);
+    console.log(`PASS ${type.name()}: calibrated 10% HTTP pair rate on both legs.`);
 
     // Fail an HTTP request before send, then a response after the server replied.
     await page.evaluate(() => {
@@ -301,10 +240,7 @@ for (const type of [chromium, firefox]) {
       );
     });
     await page.waitForFunction(() => window.httpOutcome !== "pending");
-    assert.match(
-      await page.evaluate(() => window.httpOutcome),
-      /simulated connection fault/,
-    );
+    assert.match(await page.evaluate(() => window.httpOutcome), /simulated connection fault/);
     await page.evaluate(() => {
       window.networkLab.configure({ delayMs: 500, faultRate: 0 });
       window.httpOutcome = "pending";
@@ -314,29 +250,19 @@ for (const type of [chromium, firefox]) {
       );
     });
     await page.waitForFunction(() =>
-      window.networkLab
-        .snapshot()
-        .packets.some((packet) => packet.direction === "in"),
+      window.networkLab.snapshot().packets.some((packet) => packet.direction === "in"),
     );
     await page.evaluate(() => window.networkLab.configure({ faultRate: 1 }));
     await page.waitForFunction(() => window.httpOutcome !== "pending");
-    assert.match(
-      await page.evaluate(() => window.httpOutcome),
-      /simulated connection fault/,
-    );
-    assert.equal(
-      await page.evaluate(() => window.networkLab.snapshot().packets.length),
-      0,
-    );
+    assert.match(await page.evaluate(() => window.httpOutcome), /simulated connection fault/);
+    assert.equal(await page.evaluate(() => window.networkLab.snapshot().packets.length), 0);
     console.log(`PASS ${type.name()}: HTTP request and response faults.`);
 
     // Persist controls, and check the compact and wrapped headers visually.
     await page.getByLabel("Fault rate", { exact: true }).selectOption("0.05");
     assert.equal(
       await page.evaluate(
-        () =>
-          JSON.parse(localStorage.getItem("solid-kanban:network-lab"))
-            .faultRate,
+        () => JSON.parse(localStorage.getItem("solid-kanban:network-lab")).faultRate,
       ),
       0.05,
     );
@@ -348,28 +274,16 @@ for (const type of [chromium, firefox]) {
       path: `/tmp/network-faults-phone-${type.name()}.png`,
     });
     assert.equal(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth > innerWidth,
-      ),
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
       false,
     );
-    assert.equal(
-      await page.getByLabel("Fault rate", { exact: true }).isVisible(),
-      true,
-    );
+    assert.equal(await page.getByLabel("Fault rate", { exact: true }).isVisible(), true);
     await page.reload();
-    await page.waitForFunction(
-      () => window.networkSocket?.readyState === WebSocket.OPEN,
-    );
-    assert.equal(
-      await page.getByLabel("Fault rate", { exact: true }).inputValue(),
-      "0.05",
-    );
+    await page.waitForFunction(() => window.networkSocket?.readyState === WebSocket.OPEN);
+    assert.equal(await page.getByLabel("Fault rate", { exact: true }).inputValue(), "0.05");
     await page.getByLabel("Fault rate", { exact: true }).selectOption("0");
     assert.deepEqual(errors, []);
-    console.log(
-      `PASS ${type.name()}: settings persistence, phone layout, no page errors.`,
-    );
+    console.log(`PASS ${type.name()}: settings persistence, phone layout, no page errors.`);
   } finally {
     await browser.close();
   }

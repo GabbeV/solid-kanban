@@ -1,14 +1,14 @@
+import type { NetworkPacket, NetworkRow } from "#/network-lab/core.ts";
+
 import { css } from "@csslit/core";
 import { For, Show } from "solid-js";
+
+import { colors, fontSize, networkLab, radius, space } from "#/theme.ts";
 import { Icon } from "#/ui/Icon.tsx";
-import { colors, fontSize, space, radius, networkLab } from "#/theme.ts";
-import type { NetworkPacket, NetworkRow } from "./core.ts";
 
 function Packet(props: { packet: NetworkPacket }) {
   const position = () =>
-    props.packet.direction === "in"
-      ? 1 - props.packet.progress
-      : props.packet.progress;
+    props.packet.direction === "in" ? 1 - props.packet.progress : props.packet.progress;
   return (
     <span
       aria-hidden="true"
@@ -37,10 +37,7 @@ function Packet(props: { packet: NetworkPacket }) {
   );
 }
 
-function TrafficRow(props: {
-  row: NetworkRow;
-  packets: readonly NetworkPacket[];
-}) {
+function TrafficRow(props: { row: NetworkRow; packets: readonly NetworkPacket[] }) {
   return (
     <div
       class={[
@@ -204,9 +201,7 @@ export function NetworkTimeline(props: {
           gap: ${space.xs}px;
         `}
       >
-        <For each={props.rows}>
-          {(row) => <TrafficRow row={row} packets={props.packets} />}
-        </For>
+        <For each={props.rows}>{(row) => <TrafficRow row={row} packets={props.packets} />}</For>
         <Show when={props.rows.length === 0}>
           <div
             class={css`

@@ -1,17 +1,22 @@
-import { For, Show } from "solid-js";
+import type { CardState, ViewCard } from "#/board/card-state.ts";
+import type { CardDrag } from "#/board/Card.tsx";
+import type * as db from "#/module_bindings/types.ts";
+
 import { css } from "@csslit/core";
-import type { Lane as LaneData } from "#/module_bindings/types.ts";
-import { space, boardLane, colors, fontSize, lineHeight } from "#/theme.ts";
+import { For, Show, createSignal, flush, onSettled } from "solid-js";
+
+import { Card } from "#/board/Card.tsx";
+import { placementKey } from "#/board/cards.ts";
+import { useName } from "#/name.tsx";
+import { boardLane, colors, fontSize, lineHeight, space } from "#/theme.ts";
 import { Button } from "#/ui/Button.tsx";
 import { Icon } from "#/ui/Icon.tsx";
-import { CardTile, type CardDrag } from "./CardTile";
-import { AddCard } from "./AddCard";
-import type { CardState, ViewCard } from "./card-state";
+import { Input } from "#/ui/Input.tsx";
 
 export type DropPosition = { laneId: string; beforeId: string };
 
 export function Lane(props: {
-  lane: LaneData;
+  lane: db.Lane;
   cards: readonly ViewCard[];
   cardState: CardState;
   drop?: DropPosition;
@@ -30,8 +35,7 @@ export function Lane(props: {
         flex: none;
         width: clamp(
           ${boardLane.minWidth}px,
-          (100cqi - ${space.md * (boardLane.lanesPerView - 1)}px) /
-            ${boardLane.lanesPerView},
+          (100cqi - ${space.md * (boardLane.lanesPerView - 1)}px) / ${boardLane.lanesPerView},
           ${boardLane.maxWidth}px
         );
         border-radius: 10px;
@@ -142,10 +146,7 @@ export function Lane(props: {
             return (
               <>
                 <Show
-                  when={
-                    props.drop?.laneId === props.lane.id &&
-                    props.drop?.beforeId === card().id
-                  }
+                  when={props.drop?.laneId === props.lane.id && props.drop?.beforeId === card().id}
                 >
                   <div
                     data-drop-line
@@ -158,7 +159,7 @@ export function Lane(props: {
                     `}
                   />
                 </Show>
-                <CardTile
+                <Card
                   card={card()}
                   cardState={props.cardState}
                   drag={props.drag}
@@ -168,11 +169,7 @@ export function Lane(props: {
             );
           }}
         </For>
-        <Show
-          when={
-            props.drop?.laneId === props.lane.id && props.drop?.beforeId === ""
-          }
-        >
+        <Show when={props.drop?.laneId === props.lane.id && props.drop?.beforeId === ""}>
           <div
             data-drop-line
             class={[
@@ -197,5 +194,97 @@ export function Lane(props: {
         />
       </div>
     </section>
+  );
+}
+
+function AddCard(props: { lane: db.Lane } & Pick<CardState, "cards" | "createCard">) {
+  const { name } = useName();
+  const [open, setOpen] = createSignal(false);
+  const [title, setTitle] = createSignal("");
+  let button: HTMLButtonElement | undefined;
+  let input: HTMLInputElement | undefined;
+  const close = () => {
+    setOpen(false);
+    onSettled(() => button?.focus());
+  };
+  const add = (event: SubmitEvent) => {
+    event.preventDefault();
+    const text = title().trim();
+    if (!text) return;
+    const id = crypto.randomUUID();
+    const card = {
+      id,
+      boardId: props.lane.boardId,
+      laneId: props.lane.id,
+      title: text,
+      description: "",
+      label: "",
+      priority: "Normal",
+      assignee: name(),
+      dueDate: "",
+      archived: false,
+      orderKey: placementKey(props.cards, id, props.lane.id, ""),
+    };
+    setTitle("");
+    // Commit the input reset before the creation action holds its update.
+    flush();
+    input?.focus();
+    void props.createCard(card);
+  };
+
+  return (
+    <>
+      <Show
+        when={open()}
+        fallback={
+          <Button
+            variant="ghost"
+            align="start"
+            ref={(element) => {
+              button = element;
+            }}
+            onClick={() => setOpen(true)}
+          >
+            <Icon name="plus" />
+            <span>Add a card</span>
+          </Button>
+        }
+      >
+        <form
+          class={css`
+            min-width: 0;
+          `}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              close();
+            }
+          }}
+          onSubmit={add}
+        >
+          <Input
+            type="text"
+            aria-label={`New card in ${props.lane.title}`}
+            placeholder="Title"
+            value={title()}
+            onInput={(event) => setTitle(event.currentTarget.value)}
+            onBlur={(event) => {
+              if (!event.currentTarget.value.trim()) {
+                setTitle("");
+                setOpen(false);
+              }
+            }}
+            maxlength={160}
+            required
+            ref={(element) => {
+              input = element;
+              onSettled(() => element.focus());
+            }}
+            autofocus
+          />
+        </form>
+      </Show>
+    </>
   );
 }

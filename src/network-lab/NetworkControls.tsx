@@ -1,11 +1,13 @@
+import type { NetworkSettings, NetworkSnapshot } from "#/network-lab/core.ts";
+
 import { css } from "@csslit/core";
 import { For } from "solid-js";
+
+import { delayOptions, faultRates, speedVariations } from "#/network-lab/settings.ts";
+import { colors, fontSize, networkLab, radius, space } from "#/theme.ts";
 import { Button } from "#/ui/Button.tsx";
-import { Select } from "#/ui/Select.tsx";
 import { Icon } from "#/ui/Icon.tsx";
-import { colors, fontSize, space, radius, networkLab } from "#/theme.ts";
-import type { NetworkSnapshot, NetworkSettings } from "./core.ts";
-import { delayOptions, speedVariations, faultRates } from "./settings.ts";
+import { Select } from "#/ui/Select.tsx";
 
 export function NetworkControls(props: {
   snapshot: NetworkSnapshot;
@@ -117,9 +119,7 @@ export function NetworkControls(props: {
           aria-label="Round-trip delay"
           title="Simulated round-trip delay; each direction uses half"
           value={props.snapshot.delayMs}
-          onChange={(event) =>
-            props.onConfigure({ delayMs: Number(event.currentTarget.value) })
-          }
+          onChange={(event) => props.onConfigure({ delayMs: Number(event.currentTarget.value) })}
         >
           <For each={delayOptions}>
             {(duration) => (
@@ -137,14 +137,10 @@ export function NetworkControls(props: {
           fitContent
           aria-label="Speed variation"
           value={props.snapshot.jitter}
-          onChange={(event) =>
-            props.onConfigure({ jitter: Number(event.currentTarget.value) })
-          }
+          onChange={(event) => props.onConfigure({ jitter: Number(event.currentTarget.value) })}
         >
           <For each={speedVariations}>
-            {(variation) => (
-              <option value={variation}>{`±${variation * 100}%`}</option>
-            )}
+            {(variation) => <option value={variation}>{`±${variation * 100}%`}</option>}
           </For>
         </Select>
         <span
@@ -160,13 +156,9 @@ export function NetworkControls(props: {
           aria-label="Fault rate"
           title="Failure chance per HTTP request/response pair; WebSocket messages use half the rate"
           value={props.snapshot.faultRate}
-          onChange={(event) =>
-            props.onConfigure({ faultRate: Number(event.currentTarget.value) })
-          }
+          onChange={(event) => props.onConfigure({ faultRate: Number(event.currentTarget.value) })}
         >
-          <For each={faultRates}>
-            {(rate) => <option value={rate}>{rate * 100}%</option>}
-          </For>
+          <For each={faultRates}>{(rate) => <option value={rate}>{rate * 100}%</option>}</For>
         </Select>
       </div>
       <div
