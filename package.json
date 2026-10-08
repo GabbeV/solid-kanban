@@ -19,17 +19,17 @@
     "db:generate": "node scripts/database.mjs generate"
   },
   "dependencies": {
-    "@csslit/core": "0.0.12",
+    "@csslit/core": "0.0.13",
     "@mswjs/interceptors": "^0.45.3",
     "@solidjs/router": "2.0.0-next.26",
-    "@solidjs/web": "2.0.0-rc.13",
-    "solid-js": "2.0.0-rc.13",
+    "@solidjs/web": "2.0.0-rc.14",
+    "solid-js": "2.0.0-rc.14",
     "spacetimedb": "2.10.1"
   },
   "devDependencies": {
-    "@csslit/vite-plugin": "0.0.12",
+    "@csslit/vite-plugin": "0.0.13",
     "@playwright/test": "^1.63.0",
-    "@solidjs/compiler": "2.0.0-rc.13",
+    "@solidjs/compiler": "2.0.0-rc.14",
     "@solidjs/vite-plugin": "3.0.0-next.47",
     "@types/node": "^24.0.0",
     "prettier": "3.9.8",
@@ -39,11 +39,11 @@
   },
   "pnpm": {
     "overrides": {
-      "solid-js": "2.0.0-rc.13",
-      "@solidjs/web": "2.0.0-rc.13",
-      "@solidjs/signals": "2.0.0-rc.13",
-      "@solidjs/babel-plugin": "2.0.0-rc.13",
-      "@solidjs/compiler": "2.0.0-rc.13"
+      "solid-js": "2.0.0-rc.14",
+      "@solidjs/web": "2.0.0-rc.14",
+      "@solidjs/signals": "2.0.0-rc.14",
+      "@solidjs/babel-plugin": "2.0.0-rc.14",
+      "@solidjs/compiler": "2.0.0-rc.14"
     }
   }
 }

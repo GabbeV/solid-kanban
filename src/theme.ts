@@ -89,7 +89,7 @@ export const breakpoints = {
 export const boardLane = {
   minWidth: 230,
   maxWidth: 288,
-  columnsPerView: 4,
+  lanesPerView: 4,
 } as const;
 
 // Spacing scale. Use these values for padding, margin, and gap.
@@ -147,4 +147,10 @@ export const buttonText = {
 
 export const motion = {
   cardFeedbackMs: 1800,
+} as const;
+
+// Network dock layout shared by its shell, controls, and timeline.
+export const networkLab = {
+  trafficRowHeight: space.lg + 2 * space.sm,
+  headerWrapWidth: 600,
 } as const;

@@ -386,7 +386,7 @@ try {
     await rows("unique", []);
   }
   console.log(
-    "PASS: non-primary unique columns work through both column metadata and explicit constraints, including subsequent changes to the unique value.",
+    "PASS: non-primary unique lanes work through both lane metadata and explicit constraints, including subsequent changes to the unique value.",
   );
 
   await reset();

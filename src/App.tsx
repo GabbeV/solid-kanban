@@ -1,19 +1,8 @@
-import { createRouter } from "@solidjs/router";
-import type { RouteDefinition } from "@solidjs/router";
 import { Loading } from "solid-js";
-
 import "#/global-style.tsx";
-import { Layout } from "#/Layout.tsx";
 import { css } from "@csslit/core";
-import { colors, fontSize, lineHeight, space } from "#/theme.ts";
-import { BoardChrome } from "#/board/BoardChrome.tsx";
-import { BoardBody } from "#/board/board/BoardBody.tsx";
-import { ActivityBody } from "#/board/activity/ActivityBody.tsx";
-import { ArchiveBody } from "#/board/archive/ArchiveBody.tsx";
-import {
-  globalDialogRoutes,
-  headerDialogRoutes,
-} from "#/board/dialogRoutes.tsx";
+import { colors, space, fontSize } from "#/theme.ts";
+import { Router } from "#/routes.tsx";
 import { DbConnection } from "#/module_bindings/index.ts";
 import { SpacetimeDBProvider } from "#/spacetimedb.tsx";
 import { createNetworkLab } from "#/network-lab/core.ts";
@@ -31,89 +20,6 @@ const networkLab = import.meta.env.SSR
     });
 
 import.meta.hot?.dispose(() => networkLab?.dispose());
-
-function WorkspaceRoute(props: { children?: unknown }) {
-  return (
-    <Layout>
-      <BoardChrome>{props.children as never}</BoardChrome>
-    </Layout>
-  );
-}
-
-function BoardRoute(props: { children?: unknown }) {
-  return (
-    <Layout>
-      <BoardChrome>{props.children as never}</BoardChrome>
-    </Layout>
-  );
-}
-
-const boardChildren: RouteDefinition[] = [
-  {
-    path: "/",
-    component: BoardBody,
-    info: { tab: "board" },
-    children: [
-      { path: "/" },
-      { path: "/card/:cardId" },
-      ...globalDialogRoutes,
-      ...headerDialogRoutes,
-    ],
-  },
-  {
-    path: "/activity",
-    component: ActivityBody,
-    info: { tab: "activity" },
-    children: [{ path: "/" }, ...globalDialogRoutes, ...headerDialogRoutes],
-  },
-  {
-    path: "/archive",
-    component: ArchiveBody,
-    info: { tab: "archive" },
-    children: [{ path: "/" }, ...globalDialogRoutes, ...headerDialogRoutes],
-  },
-];
-
-const workspaceChildren: RouteDefinition[] = [
-  {
-    path: "/",
-    component: BoardBody,
-    info: { tab: "board" },
-    children: [{ path: "/" }, ...globalDialogRoutes, ...headerDialogRoutes],
-  },
-];
-
-const Router = createRouter({
-  routes: [
-    {
-      path: "/",
-      component: WorkspaceRoute,
-      children: workspaceChildren,
-    },
-    {
-      path: "/b/:boardId",
-      component: BoardRoute,
-      children: boardChildren,
-    },
-    {
-      path: "*404",
-      component: () => (
-        <div
-          class={css`
-            padding: ${space.xl}px;
-            color: ${colors.muted};
-            text-align: center;
-            font-size: ${fontSize.control}px;
-            line-height: ${lineHeight.control}px;
-          `}
-        >
-          {"This page does not exist. "}
-          <a href="/">Back to the board</a>
-        </div>
-      ),
-    },
-  ],
-});
 
 export default function App() {
   return (

@@ -10,13 +10,13 @@ for (const type of [chromium, firefox]) {
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto("http://127.0.0.1:3002/b/studio");
-    const dock = page.getByRole("complementary", { name: "Network lab" });
+    const dock = page.getByRole("dialog", { name: "Network lab" });
     const bubble = await dock.boundingBox();
     assert.ok(bubble.width < 260 && bubble.height >= 33 && bubble.height < 60);
     assert.ok(bubble.x > 1000 && bubble.y > 800);
     await page.screenshot({ path: `/tmp/network-bubble-${type.name()}.png` });
     await page.getByRole("button", { name: /Network lab/ }).click();
-    await page.getByLabel("One-way delay").selectOption("2500");
+    await page.getByLabel("Round-trip delay").selectOption("2500");
     await page.getByLabel("Speed variation").selectOption("0.5");
     const initial = await dock.boundingBox();
     assert.ok(
@@ -51,7 +51,7 @@ for (const type of [chromium, firefox]) {
     await page.getByRole("link", { name: "Activity", exact: true }).click();
     await page.waitForFunction(() =>
       document.querySelector(
-        'aside[aria-label="Network lab"] span[aria-hidden=true]',
+        'dialog[aria-label="Network lab"] span[aria-hidden=true]',
       ),
     );
     await page.screenshot({
@@ -84,7 +84,7 @@ for (const type of [chromium, firefox]) {
       ),
       false,
     );
-    await page.getByLabel("One-way delay").selectOption("0");
+    await page.getByLabel("Round-trip delay").selectOption("0");
     await page.waitForURL("**/b/studio/activity");
     assert.deepEqual(errors, []);
     console.log(

@@ -10,6 +10,15 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+export const Activity = __t.object("Activity", {
+  id: __t.string(),
+  boardId: __t.string(),
+  actor: __t.string(),
+  text: __t.string(),
+  createdAt: __t.f64(),
+});
+export type Activity = __Infer<typeof Activity>;
+
 export const Board = __t.object("Board", {
   id: __t.string(),
   title: __t.string(),
@@ -21,29 +30,17 @@ export type Board = __Infer<typeof Board>;
 export const Card = __t.object("Card", {
   id: __t.string(),
   boardId: __t.string(),
-  columnId: __t.string(),
+  laneId: __t.string(),
   title: __t.string(),
   description: __t.string(),
-  position: __t.f64(),
   label: __t.string(),
   priority: __t.string(),
   assignee: __t.string(),
-  due: __t.string(),
-  revision: __t.u32(),
+  dueDate: __t.string(),
   archived: __t.bool(),
   orderKey: __t.string(),
-  moveVersion: __t.f64(),
-  moveId: __t.string(),
 });
 export type Card = __Infer<typeof Card>;
-
-export const Column = __t.object("Column", {
-  id: __t.string(),
-  boardId: __t.string(),
-  title: __t.string(),
-  position: __t.f64(),
-});
-export type Column = __Infer<typeof Column>;
 
 export const Comment = __t.object("Comment", {
   id: __t.string(),
@@ -55,14 +52,19 @@ export const Comment = __t.object("Comment", {
 });
 export type Comment = __Infer<typeof Comment>;
 
-export const Receipt = __t.object("Receipt", {
+export const Lane = __t.object("Lane", {
   id: __t.string(),
   boardId: __t.string(),
-  actor: __t.string(),
-  text: __t.string(),
-  createdAt: __t.f64(),
+  title: __t.string(),
+  position: __t.f64(),
 });
-export type Receipt = __Infer<typeof Receipt>;
+export type Lane = __Infer<typeof Lane>;
 
 export const RecentActivity = __t.object("RecentActivity", {});
 export type RecentActivity = __Infer<typeof RecentActivity>;
+
+export const ReducerAck = __t.object("ReducerAck", {
+  connectionId: __t.connectionId(),
+  sequence: __t.u64(),
+});
+export type ReducerAck = __Infer<typeof ReducerAck>;

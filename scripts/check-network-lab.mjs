@@ -18,7 +18,10 @@ for (const browserType of [chromium, firefox]) {
       "ws://127.0.0.1:3002/network-lab-check",
       (socket) => {
         server = socket;
-        socket.onMessage((message) => receivedOutgoing.push(message));
+        socket.onMessage((message) => {
+          receivedOutgoing.push(message);
+          if (message === "round-trip-check") socket.send(message);
+        });
       },
     );
     await page.route("**/__network-lab", (route) =>
@@ -43,6 +46,39 @@ for (const browserType of [chromium, firefox]) {
         },
         { delayMs, jitter, sample },
       );
+    // Zero variation: a WS echo and HTTP request/response each take one RTT.
+    await configure(1000);
+    const elapsed = await page.evaluate(async () => {
+      const start = performance.now();
+      await new Promise((resolve) => {
+        const received = (event) => {
+          if (event.data !== "round-trip-check") return;
+          window.networkSocket.removeEventListener("message", received);
+          resolve();
+        };
+        window.networkSocket.addEventListener("message", received);
+        window.networkSocket.send("round-trip-check");
+      });
+      const ws = performance.now() - start;
+      const httpStart = performance.now();
+      await fetch("/network-lab-http-check");
+      return { ws, http: performance.now() - httpStart };
+    });
+    for (const [kind, duration] of Object.entries(elapsed)) {
+      assert.ok(
+        duration >= 1000 && duration < 1500,
+        `${kind} should add 1000ms round-trip delay, got ${duration}ms`,
+      );
+    }
+    console.log(
+      `PASS (${browserType.name()}): WS and HTTP round-trip timing.`,
+      elapsed,
+    );
+    await page.evaluate(() => {
+      window.networkReceived.length = 0;
+    });
+    receivedOutgoing.length = 0;
+
     const send = async (direction, label) => {
       if (direction === "in") server.send(label);
       else
@@ -128,7 +164,7 @@ for (const browserType of [chromium, firefox]) {
     let incomingCount = 0;
     for (const direction of ["in", "out"]) {
       for (const jitter of [0, 1]) {
-        await configure(2000, jitter);
+        await configure(4000, jitter);
         const labels = [0, 1, 2].map(
           (index) => `${direction}:${jitter}:${index}`,
         );
@@ -165,7 +201,7 @@ for (const browserType of [chromium, firefox]) {
           ),
         );
         const node = await page
-          .locator('aside[aria-label="Network lab"] span[aria-hidden=true]')
+          .locator('dialog[aria-label="Network lab"] span[aria-hidden=true]')
           .first()
           .elementHandle();
         await observe();
@@ -199,14 +235,14 @@ for (const browserType of [chromium, firefox]) {
       }
     }
 
-    await configure(5000);
+    await configure(10000);
     await toggle();
     await send("in", "speed-change");
     await waitProgress("in", 0.1);
     const slowBefore = await samplePlayback("in");
     await observe();
     const slowAfter = await samplePlayback("in");
-    await configure(1000);
+    await configure(2000);
     const fastBefore = await samplePlayback("in");
     await observe();
     const fastAfter = await samplePlayback("in");
@@ -228,7 +264,7 @@ for (const browserType of [chromium, firefox]) {
     );
 
     // Independent channel conditions; changing variation eases toward a new speed.
-    await configure(3000, 1, 0.1);
+    await configure(6000, 1, 0.1);
     await send("out", "slow-channel");
     await page.evaluate(() => {
       window.networkRandom = 0.9;
@@ -247,7 +283,7 @@ for (const browserType of [chromium, firefox]) {
         4 * (outAfter[0].progress - outBefore[0].progress),
       "WS directions must have independent conditions",
     );
-    await configure(3000, 1, 0.9);
+    await configure(6000, 1, 0.9);
     const easingBefore = await samplePlayback("out");
     await observe();
     const easingAfter = await samplePlayback("out");
@@ -268,7 +304,7 @@ for (const browserType of [chromium, firefox]) {
       `PASS (${browserType.name()}): independent directions and smooth variation.`,
     );
 
-    await configure(1000);
+    await configure(2000);
     await page.evaluate(() => {
       window.httpOutcome = "pending";
       void fetch("/network-lab-http-check")

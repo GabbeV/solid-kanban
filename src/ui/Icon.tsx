@@ -62,8 +62,11 @@ export const paths: Record<string, string> = {
   archive: "M.5 .5h10v4H.5zM1.5 4.5v6h8v-6M4 7.5h3",
   trash: "M1 2.5h9M3.5 2.5v-2h4v2M2.5 2.5v8h6v-8M4.5 4v4M6.5 4v4",
   restore: "M4.5 2.5 2 5l2.5 2.5M2 5h4.5a2 2 0 0 1 0 4H5",
+  retry: "M9.5 4.5a4 4 0 1 0 0 3M9.5 .5v4h-4",
   arrow: "M1.5 5.5h8M7 3l2.5 2.5L7 8",
   leaf: "M9.5 1.5C4 1.5 1.5 4 2.5 8S9 9.5 9.5 1.5ZM2.5 9.5 8 3",
   flag: "M1.5 9.5v-8c2-1.5 4 1.5 7 0v5c-3 1.5-5-1.5-7 0",
   calendar: "M1.5 2.5h8v7h-8zM3.5 .5v3M7.5 .5v3M1.5 5.5h8",
+  bolt: "M6.5 .5 1.5 6h4l-1 4.5 5-6h-4z",
+  unplug: "M3.5 .5v3M7.5 .5v3M2.5 3.5h6v1a3 3 0 0 1-6 0zM5.5 7.5v1M5.5 9.5v1",
 };

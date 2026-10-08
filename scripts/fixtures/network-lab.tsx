@@ -2,6 +2,7 @@ import { render } from "@solidjs/web";
 import { Loading } from "solid-js";
 import { createNetworkLab, type NetworkLab } from "../../src/network-lab/core";
 import { NetworkPanel } from "../../src/network-lab/NetworkPanel";
+import { readNetworkSettings } from "../../src/network-lab/settings";
 import "../../src/global-style";
 
 declare global {
@@ -18,7 +19,7 @@ window.networkRandom = 0.5;
 Math.random = () => window.networkRandom;
 const lab = createNetworkLab({
   interceptWebSocket: (url) => url.pathname === "/network-lab-check",
-  initialSettings: { delayMs: 2000, jitter: 1 },
+  initialSettings: readNetworkSettings(),
 });
 window.networkLab = lab;
 window.waitForPackets = (count, direction) =>

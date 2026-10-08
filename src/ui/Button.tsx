@@ -15,6 +15,13 @@ export type ButtonVariant =
   "default" | "primary" | "danger" | "ghost" | "danger-ghost" | "text";
 export type ButtonPad = keyof typeof buttonPad;
 export type ButtonFont = keyof typeof buttonText | "inherit";
+export type ButtonBleed =
+  | "block"
+  | "inline"
+  | "block-start"
+  | "block-end"
+  | "inline-start"
+  | "inline-end";
 
 type ButtonStyles = {
   variant?: ButtonVariant;
@@ -27,10 +34,10 @@ type ButtonStyles = {
   /** Square single-icon button; box size follows the 9px icon + pad + border. */
   iconOnly?: boolean;
   /**
-   * Shift the border-box by −(pad + border) so a backgroundless button’s
-   * glyph sits on the surrounding content edge instead of inside its chrome.
+   * Negative margins of pad + border on the chosen logical edges.
+   * `true` bleeds on every edge; arrays combine directions.
    */
-  bleed?: boolean;
+  bleed?: boolean | ButtonBleed | readonly ButtonBleed[];
 };
 
 export type ButtonProps = ButtonStyles &
@@ -143,6 +150,10 @@ export function Button(props: ButtonProps) {
     props.pad ?? (variant() === "text" ? "xs" : "md");
   const fontKey = (): ButtonFont =>
     props.font ?? (variant() === "text" ? "inherit" : "control");
+  const bleeds = (direction: ButtonBleed) =>
+    props.bleed === true ||
+    props.bleed === direction ||
+    (Array.isArray(props.bleed) && props.bleed.includes(direction));
 
   return (
     <Element
@@ -166,6 +177,10 @@ export function Button(props: ButtonProps) {
           min-width: 0;
           padding: var(--button-padding);
           --button-border: 1px;
+          --button-shimmer-surface: ${colors.soft};
+          --button-shimmer-highlight: ${colors.hover};
+          --button-shimmer-border: ${colors.border};
+          --button-shimmer-border-highlight: ${colors.borderHover};
         `,
         props.align === "start" &&
           css`
@@ -232,9 +247,23 @@ export function Button(props: ButtonProps) {
               border-color: ${colors.primaryHover};
             }
           `,
+        (variant() === "danger" || variant() === "danger-ghost") &&
+          css`
+            --button-shimmer-surface: ${colors.dangerSurface};
+            --button-shimmer-highlight: ${colors.dangerBorder};
+            --button-shimmer-border: ${colors.dangerBorder};
+            --button-shimmer-border-highlight: ${colors.danger};
+          `,
         variant() === "danger" &&
           css`
             color: ${colors.danger};
+
+            &[aria-pressed="true"],
+            body:not(:has([data-dragging]))
+              &[aria-pressed="true"]:hover:not(:disabled) {
+              background: ${colors.dangerSurface};
+              border-color: ${colors.dangerBorder};
+            }
           `,
         variant() === "ghost" &&
           css`
@@ -261,7 +290,7 @@ export function Button(props: ButtonProps) {
             color: ${colors.danger};
 
             body:not(:has([data-dragging])) &:hover:not(:disabled) {
-              background: ${colors.dangerSurface};
+              background: ${colors.dangerBorder};
             }
           `,
         variant() === "text" &&
@@ -293,26 +322,59 @@ export function Button(props: ButtonProps) {
             display: inline-grid;
             place-items: center;
           `,
-        props.bleed &&
+        (bleeds("block") || bleeds("block-start")) &&
           css`
-            margin: calc(-1 * (var(--button-padding) + var(--button-border)));
+            margin-block-start: calc(
+              -1 * (var(--button-padding) + var(--button-border))
+            );
+          `,
+        (bleeds("block") || bleeds("block-end")) &&
+          css`
+            margin-block-end: calc(
+              -1 * (var(--button-padding) + var(--button-border))
+            );
+          `,
+        (bleeds("inline") || bleeds("inline-start")) &&
+          css`
+            margin-inline-start: calc(
+              -1 * (var(--button-padding) + var(--button-border))
+            );
+          `,
+        (bleeds("inline") || bleeds("inline-end")) &&
+          css`
+            margin-inline-end: calc(
+              -1 * (var(--button-padding) + var(--button-border))
+            );
           `,
         pending() &&
           borderless() &&
           css`
-            isolation: isolate;
-            &::after {
-              inset: 0;
-              z-index: -1;
-              padding: 0;
-              mask: none;
-              background: linear-gradient(
-                100deg,
-                ${colors.soft} 40%,
-                ${colors.hover} 50%,
-                ${colors.soft} 60%
-              );
-              background-size: 300% 100%;
+            --button-shimmer-background: linear-gradient(
+              100deg,
+              var(--button-shimmer-surface) 40%,
+              var(--button-shimmer-highlight) 50%,
+              var(--button-shimmer-surface) 60%
+            );
+            animation: button-background-pending 2.4s linear 150ms infinite;
+
+            @keyframes button-background-pending {
+              from,
+              to {
+                background-color: transparent;
+                background-image: var(--button-shimmer-background);
+                background-size: 300% 100%;
+              }
+              from {
+                background-position: 0 0;
+              }
+              to {
+                background-position: 100% 0;
+              }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+              animation-delay: 0s;
+              animation-play-state: paused;
             }
           `,
         pending() &&
@@ -321,13 +383,30 @@ export function Button(props: ButtonProps) {
             &:disabled {
               cursor: progress;
             }
+          `,
+        pending() &&
+          !borderless() &&
+          css`
             &::after {
               content: "";
               position: absolute;
+              inset: calc(-1 * var(--button-border));
               border-radius: inherit;
               pointer-events: none;
               opacity: 0;
               animation: button-pending 2.4s linear 150ms infinite;
+              padding: 1px;
+              background: linear-gradient(
+                100deg,
+                var(--button-shimmer-border) 46%,
+                var(--button-shimmer-border-highlight) 50%,
+                var(--button-shimmer-border) 54%
+              );
+              background-size: 300% 100%;
+              mask:
+                linear-gradient(#fff, #fff) content-box,
+                linear-gradient(#fff, #fff);
+              mask-composite: exclude;
             }
 
             @keyframes button-pending {
@@ -346,25 +425,6 @@ export function Button(props: ButtonProps) {
                 animation: none;
                 opacity: 1;
               }
-            }
-          `,
-        pending() &&
-          !borderless() &&
-          css`
-            &::after {
-              inset: -1px;
-              padding: 1px;
-              background: linear-gradient(
-                100deg,
-                ${colors.border} 46%,
-                ${colors.borderHover} 50%,
-                ${colors.border} 54%
-              );
-              background-size: 300% 100%;
-              mask:
-                linear-gradient(#fff, #fff) content-box,
-                linear-gradient(#fff, #fff);
-              mask-composite: exclude;
             }
           `,
       ]}

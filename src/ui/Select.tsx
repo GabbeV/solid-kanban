@@ -20,7 +20,7 @@ export function Select(
           -webkit-appearance: none;
           width: 100%;
           min-width: 0;
-          height: 33px;
+          height: ${control.fontSize + 2 * (control.pad + 1)}px;
           border: 1px solid ${colors.border};
           border-radius: ${radius.control}px;
           background-color: ${colors.paper};

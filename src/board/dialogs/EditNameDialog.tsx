@@ -36,14 +36,19 @@ export function EditNameDialog(props: { onClose: () => void }) {
         `}
         onSubmit={(event) => {
           event.preventDefault();
+          const value = String(
+            new FormData(event.currentTarget).get("name"),
+          ).trim();
+          if (!value || value.length > 32) {
+            setStorageError("Use a name of 1–32 characters.");
+            return;
+          }
           try {
-            save(String(new FormData(event.currentTarget).get("name")));
+            save(value);
             props.onClose();
-          } catch (error) {
+          } catch {
             setStorageError(
-              error instanceof Error
-                ? error.message
-                : "Couldn't save your name.",
+              "Couldn't save your name. Check that cookies are allowed.",
             );
           }
         }}

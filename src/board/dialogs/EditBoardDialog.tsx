@@ -1,12 +1,5 @@
 import { css } from "@csslit/core";
-import {
-  Show,
-  action,
-  createOptimistic,
-  createSignal,
-  createStore,
-  untrack,
-} from "solid-js";
+import { Show, action, createSignal, createStore, untrack } from "solid-js";
 import type { Board } from "../../module_bindings/types";
 import { space } from "#/theme.ts";
 import { Button } from "#/ui/Button.tsx";
@@ -31,65 +24,40 @@ export function EditBoardDialog(props: {
     description: props.board.description,
   }));
   const [draft, setDraft] = createStore(initial);
-  const [pending, setPending] = createOptimistic(false);
   const [error, setError] = createSignal<string>();
-  const [deleting, setDeleting] = createOptimistic(false);
   const [deleteError, setDeleteError] = createSignal<string>();
-  const busy = () => pending() || deleting();
-  let deleteOperationId: string | undefined;
   const deleteBoard = action(function* () {
-    if (busy()) return;
     const request = {
       boardId: props.board.id,
       actor: name(),
-      operationId: (deleteOperationId ??= crypto.randomUUID()),
     };
-    setDeleting(true);
-    setDeleteError(undefined);
     try {
       yield reducers.deleteBoard(request);
+      setDeleteError(undefined);
       props.onDeleted(request.boardId);
-    } catch (cause) {
-      setDeleteError(
-        cause instanceof Error
-          ? cause.message
-          : "Couldn't confirm board deletion.",
-      );
+    } catch {
+      setDeleteError("Deletion not confirmed.");
     }
   });
-  let previous:
-    { title: string; description: string; operationId: string } | undefined;
   const save = action(function* (event: {
     preventDefault(): void;
     currentTarget: HTMLFormElement;
   }) {
     event.preventDefault();
-    if (busy()) return;
     const fields = new FormData(event.currentTarget);
     const title = String(fields.get("title"));
     const description = String(fields.get("description"));
-    const operationId =
-      previous?.title === title && previous.description === description
-        ? previous.operationId
-        : crypto.randomUUID();
-    previous = { title, description, operationId };
-    setPending(true);
-    setError(undefined);
     try {
-      yield reducers.renameBoard({
+      yield reducers.editBoard({
         boardId: props.board.id,
-        operationId,
         actor: name(),
         title,
         description,
       });
+      setError(undefined);
       props.onClose();
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Couldn't confirm the board changes.",
-      );
+    } catch {
+      setError("Changes not confirmed.");
     }
   });
   return (
@@ -102,7 +70,7 @@ export function EditBoardDialog(props: {
           gap: ${space.lg}px;
         `}
       >
-        <Field label="Board title">
+        <Field label="Title">
           <Input
             autofocus
             name="title"
@@ -114,10 +82,9 @@ export function EditBoardDialog(props: {
             }
             maxlength={80}
             required
-            disabled={busy()}
           />
         </Field>
-        <Field label="Board description">
+        <Field label="Description">
           <Textarea
             name="description"
             value={draft.description}
@@ -127,10 +94,9 @@ export function EditBoardDialog(props: {
               })
             }
             maxlength={500}
-            disabled={busy()}
           />
         </Field>
-        <Show when={error() && !pending()}>
+        <Show when={error()}>
           <Notice>{error()} Your draft stays here.</Notice>
         </Show>
         <div
@@ -142,16 +108,16 @@ export function EditBoardDialog(props: {
             gap: ${space.sm}px;
           `}
         >
-          <Button type="submit" variant="primary" disabled={busy()}>
+          <Button type="submit" variant="primary">
             <span>Save</span>
           </Button>
-          <Button variant="danger" disabled={busy()} onClick={deleteBoard}>
+          <Button variant="danger" onClick={deleteBoard}>
             <Icon name="trash" />
             <span>Delete</span>
           </Button>
         </div>
       </form>
-      <Show when={deleteError() && !deleting()}>
+      <Show when={deleteError()}>
         <Notice role="alert">{deleteError()}</Notice>
       </Show>
     </Dialog>

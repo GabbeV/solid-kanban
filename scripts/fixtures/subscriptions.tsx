@@ -1,6 +1,7 @@
 import { Errored, For, Loading, createSignal } from "solid-js";
 import { render } from "@solidjs/web";
 import {
+  ConnectionId,
   evaluateBooleanExpr,
   getQueryAccessorName,
   getQueryWhereClause,
@@ -11,8 +12,12 @@ import {
   type RowExpr,
   type RowTypedQuery,
 } from "spacetimedb";
-import { SpacetimeDBProvider, useTable } from "../../src/spacetimedb";
-import { tables } from "../../src/module_bindings";
+import {
+  SpacetimeDBProvider,
+  useReducers,
+  useTable,
+} from "../../src/spacetimedb";
+import { tables } from "../../src/module_bindings/index";
 
 type Query = Parameters<typeof evaluateBooleanExpr>[0];
 type Row = { id: string; title: string; description: string; color: string };
@@ -78,10 +83,32 @@ const refreshCache = () => {
     }),
   );
 };
+const reducerCalls: { resolve(): void }[] = [];
+const acknowledgments = new Set<
+  (ctx: unknown, row: { sequence: bigint }) => void
+>();
 const db = {
+  connectionId: new ConnectionId(1n),
   isActive: true,
-  reducers: {},
+  reducers: {
+    moveCard: (args: { sequence: bigint }) =>
+      new Promise<void>((resolve) =>
+        reducerCalls.push({
+          resolve() {
+            for (const callback of acknowledgments) callback({}, args);
+            resolve();
+          },
+        }),
+      ),
+  },
   db: {
+    reducerAck: {
+      onInsert: (callback: (ctx: unknown, row: { sequence: bigint }) => void) =>
+        acknowledgments.add(callback),
+      removeOnInsert: (
+        callback: (ctx: unknown, row: { sequence: bigint }) => void,
+      ) => acknowledgments.delete(callback),
+    },
     board: {
       iter: () => cached.values(),
       onInsert: (callback: () => void) => listeners.insert.add(callback),
@@ -108,6 +135,10 @@ const db = {
         return builder;
       },
       subscribe(query: ReaderSpec["query"]) {
+        if (getQueryAccessorName(query) === "reducerAck") {
+          applied();
+          return { isActive: () => true, unsubscribe() {} };
+        }
         if (getQueryAccessorName(query) !== "board")
           throw new Error("Fixture supports boards only");
         const entry = {
@@ -142,6 +173,7 @@ const db = {
   disconnect() {},
 };
 const builder = {
+  autoConnect: true,
   onConnect(callback: (next: typeof db) => void) {
     this.connect = callback;
     return this;
@@ -149,12 +181,14 @@ const builder = {
   onConnectError() {
     return this;
   },
-  onDisconnect() {
+  onDisconnect(callback: (next: typeof db, error: Error) => void) {
+    this.disconnected = callback;
     return this;
   },
   connect: (_db: typeof db) => {},
+  disconnected: (_db: typeof db, _error: Error) => {},
   build() {
-    queueMicrotask(() => this.connect(db));
+    if (this.autoConnect) queueMicrotask(() => this.connect(db));
     return db;
   },
 };
@@ -166,6 +200,7 @@ function Reader(props: ReaderSpec) {
 
 function Harness() {
   const [readers, setReaders] = createSignal<ReaderSpec[]>([]);
+  const reducers = useReducers();
   Object.assign(window, {
     fixture: {
       add(
@@ -203,6 +238,26 @@ function Harness() {
       },
       registrations,
       listeners,
+      reducerCalls,
+      move: () =>
+        reducers.moveCard({
+          boardId: "test",
+          id: "A",
+          laneId: "test",
+          orderKey: "test",
+          actor: "Test",
+        }),
+      disconnect() {
+        builder.autoConnect = false;
+        db.isActive = false;
+        for (const entry of registrations) entry.active = false;
+        cached = [];
+        builder.disconnected(db, new Error("Fixture disconnect"));
+      },
+      reconnect() {
+        db.isActive = true;
+        builder.connect(db);
+      },
     },
   });
   return (

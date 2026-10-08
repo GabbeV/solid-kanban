@@ -38,29 +38,53 @@ import AddCommentReducer from "./add_comment_reducer";
 import ArchiveCardReducer from "./archive_card_reducer";
 import CreateBoardReducer from "./create_board_reducer";
 import CreateCardReducer from "./create_card_reducer";
-import CreateColumnReducer from "./create_column_reducer";
+import CreateLaneReducer from "./create_lane_reducer";
 import DeleteBoardReducer from "./delete_board_reducer";
 import DeleteCardReducer from "./delete_card_reducer";
-import DeleteColumnReducer from "./delete_column_reducer";
+import DeleteLaneReducer from "./delete_lane_reducer";
+import EditBoardReducer from "./edit_board_reducer";
 import EditCardReducer from "./edit_card_reducer";
 import MoveCardReducer from "./move_card_reducer";
-import RenameBoardReducer from "./rename_board_reducer";
-import RenameColumnReducer from "./rename_column_reducer";
+import RenameLaneReducer from "./rename_lane_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
+import ActivityRow from "./activity_table";
 import BoardRow from "./board_table";
 import CardRow from "./card_table";
-import ColumnRow from "./column_table";
 import CommentRow from "./comment_table";
-import ReceiptRow from "./receipt_table";
+import LaneRow from "./lane_table";
 import RecentActivityRow from "./recent_activity_table";
+import ReducerAckRow from "./reducer_ack_table";
 
 /** Type-only namespace exports for generated type groups. */
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  activity: __table(
+    {
+      name: "activity",
+      indexes: [
+        {
+          accessor: "boardId",
+          name: "activity_board_id_idx_btree",
+          algorithm: "btree",
+          columns: ["boardId"],
+        },
+        {
+          accessor: "id",
+          name: "activity_id_idx_btree",
+          algorithm: "btree",
+          columns: ["id"],
+        },
+      ],
+      constraints: [
+        { name: "activity_id_key", constraint: "unique", columns: ["id"] },
+      ],
+    },
+    ActivityRow,
+  ),
   board: __table(
     {
       name: "board",
@@ -89,16 +113,16 @@ const tablesSchema = __schema({
           columns: ["boardId"],
         },
         {
-          accessor: "columnId",
-          name: "card_column_id_idx_btree",
-          algorithm: "btree",
-          columns: ["columnId"],
-        },
-        {
           accessor: "id",
           name: "card_id_idx_btree",
           algorithm: "btree",
           columns: ["id"],
+        },
+        {
+          accessor: "laneId",
+          name: "card_lane_id_idx_btree",
+          algorithm: "btree",
+          columns: ["laneId"],
         },
       ],
       constraints: [
@@ -106,29 +130,6 @@ const tablesSchema = __schema({
       ],
     },
     CardRow,
-  ),
-  column: __table(
-    {
-      name: "column",
-      indexes: [
-        {
-          accessor: "boardId",
-          name: "column_board_id_idx_btree",
-          algorithm: "btree",
-          columns: ["boardId"],
-        },
-        {
-          accessor: "id",
-          name: "column_id_idx_btree",
-          algorithm: "btree",
-          columns: ["id"],
-        },
-      ],
-      constraints: [
-        { name: "column_id_key", constraint: "unique", columns: ["id"] },
-      ],
-    },
-    ColumnRow,
   ),
   comment: __table(
     {
@@ -159,28 +160,44 @@ const tablesSchema = __schema({
     },
     CommentRow,
   ),
-  receipt: __table(
+  lane: __table(
     {
-      name: "receipt",
+      name: "lane",
       indexes: [
         {
           accessor: "boardId",
-          name: "receipt_board_id_idx_btree",
+          name: "lane_board_id_idx_btree",
           algorithm: "btree",
           columns: ["boardId"],
         },
         {
           accessor: "id",
-          name: "receipt_id_idx_btree",
+          name: "lane_id_idx_btree",
           algorithm: "btree",
           columns: ["id"],
         },
       ],
       constraints: [
-        { name: "receipt_id_key", constraint: "unique", columns: ["id"] },
+        { name: "lane_id_key", constraint: "unique", columns: ["id"] },
       ],
     },
-    ReceiptRow,
+    LaneRow,
+  ),
+  reducerAck: __table(
+    {
+      name: "reducer_ack",
+      indexes: [
+        {
+          accessor: "connectionId",
+          name: "reducer_ack_connection_id_idx_btree",
+          algorithm: "btree",
+          columns: ["connectionId"],
+        },
+      ],
+      constraints: [],
+      event: true,
+    },
+    ReducerAckRow,
   ),
   recentActivity: __table(
     {
@@ -198,14 +215,14 @@ const reducersSchema = __reducers(
   __reducerSchema("archive_card", ArchiveCardReducer),
   __reducerSchema("create_board", CreateBoardReducer),
   __reducerSchema("create_card", CreateCardReducer),
-  __reducerSchema("create_column", CreateColumnReducer),
+  __reducerSchema("create_lane", CreateLaneReducer),
   __reducerSchema("delete_board", DeleteBoardReducer),
   __reducerSchema("delete_card", DeleteCardReducer),
-  __reducerSchema("delete_column", DeleteColumnReducer),
+  __reducerSchema("delete_lane", DeleteLaneReducer),
+  __reducerSchema("edit_board", EditBoardReducer),
   __reducerSchema("edit_card", EditCardReducer),
   __reducerSchema("move_card", MoveCardReducer),
-  __reducerSchema("rename_board", RenameBoardReducer),
-  __reducerSchema("rename_column", RenameColumnReducer),
+  __reducerSchema("rename_lane", RenameLaneReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

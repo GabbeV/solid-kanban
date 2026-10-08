@@ -3,6 +3,7 @@ import {
   createMemo,
   createSignal,
   onCleanup,
+  until,
   useContext,
   type Accessor,
 } from "solid-js";
@@ -18,6 +19,7 @@ import {
 import {
   DbConnection,
   reducers as reducerDefinitions,
+  tables,
   type SubscriptionHandle,
 } from "./module_bindings/index.js";
 import { SyncPromise } from "./primitives/syncpromise";
@@ -45,9 +47,20 @@ type PrimaryKeyValue<T extends AnyTable> =
     ? QueryRow<T>[PrimaryKeyName<T>]
     : never;
 
+type Reducers = {
+  [K in keyof DbConnection["reducers"]]: (
+    args: Omit<Parameters<DbConnection["reducers"][K]>[0], "sequence">,
+  ) => Promise<void>;
+};
+
 type ConnectionSession = {
   db: DbConnection;
-  reducers: DbConnection["reducers"];
+  reducers: {
+    [K in keyof Reducers]: (
+      args: Parameters<Reducers[K]>[0],
+      confirmed: () => void,
+    ) => Promise<void>;
+  };
   subscriptions: Set<SharedSubscription>;
 };
 
@@ -250,7 +263,7 @@ function retainSubscription(
         entry.applied = true;
         // A reader may have unmounted before the subscription was applied.
         if (entry.readers.size === 0) {
-          entry.handle?.unsubscribe();
+          if (session.db.isActive) entry.handle?.unsubscribe();
           return;
         }
         entry.ready.resolve(undefined);
@@ -294,7 +307,8 @@ function retainSubscription(
     for (const entry of entries) {
       if (!entry.readers.delete(onError) || entry.readers.size !== 0) continue;
       session.subscriptions.delete(entry);
-      if (entry.handle?.isActive()) entry.handle.unsubscribe();
+      if (session.db.isActive && entry.handle?.isActive())
+        entry.handle.unsubscribe();
     }
   };
   // A cached unique match proves the initial snapshot, not ongoing coverage.
@@ -320,27 +334,55 @@ function retainSubscription(
   };
 }
 
-const SpacetimeDBContext =
-  createContext<Accessor<Promise<ConnectionSession>>>();
+type ConnectionSource = {
+  ready(): Promise<ConnectionSession>;
+  subscribe(listener: () => void): () => void;
+};
+
+const SpacetimeDBContext = createContext<ConnectionSource>();
 
 function createSession(
   db: DbConnection,
-  disconnected: Promise<void>,
+  disconnected: Promise<Error | undefined>,
 ): ConnectionSession {
-  const pending = new Set<(error: Error) => void>();
+  const pending = new Map<
+    bigint,
+    { confirmed(): void; reject(error: unknown): void }
+  >();
+  let sequence = 0n;
   let disconnectError: Error | undefined;
-  void disconnected.then(() => {
-    disconnectError = new Error(
-      "Disconnected before reducer confirmation; the outcome is unknown.",
+  const acknowledgmentsReady = Promise.withResolvers<void>();
+  // A subscription can fail before any reducer call starts waiting for it.
+  void acknowledgmentsReady.promise.catch(() => {});
+  const onAcknowledgment: Parameters<typeof db.db.reducerAck.onInsert>[0] = (
+    _ctx,
+    event,
+  ) => pending.get(event.sequence)?.confirmed();
+  db.db.reducerAck.onInsert(onAcknowledgment);
+  db.subscriptionBuilder()
+    .onApplied(() => acknowledgmentsReady.resolve())
+    .onError((ctx) => acknowledgmentsReady.reject(ctx.event))
+    .subscribe(
+      tables.reducerAck.where((row) => row.connectionId.eq(db.connectionId)),
     );
-    for (const reject of pending) reject(disconnectError);
+
+  void disconnected.then((cause) => {
+    disconnectError = new Error(
+      cause
+        ? `${cause.message} Disconnected before reducer confirmation; the outcome is unknown.`
+        : "Disconnected before reducer confirmation; the outcome is unknown.",
+      { cause },
+    );
+    acknowledgmentsReady.reject(disconnectError);
+    db.db.reducerAck.removeOnInsert(onAcknowledgment);
+    for (const call of pending.values()) call.reject(disconnectError);
     pending.clear();
   });
 
   const reducers = Object.fromEntries(
     Object.entries(db.reducers).map(([name, reducer]) => [
       name,
-      (args: unknown) =>
+      (args: object, confirmed: () => void) =>
         new Promise<void>((resolve, reject) => {
           if (disconnectError || !db.isActive) {
             reject(
@@ -349,25 +391,28 @@ function createSession(
             return;
           }
 
-          pending.add(reject);
-          try {
-            Reflect.apply(reducer, db.reducers, [args]).then(
-              () => {
-                pending.delete(reject);
-                resolve();
-              },
-              (error: unknown) => {
-                pending.delete(reject);
-                reject(error);
-              },
-            );
-          } catch (error) {
-            pending.delete(reject);
+          const callSequence = ++sequence;
+          pending.set(callSequence, { confirmed, reject });
+          const fail = (error: unknown) => {
+            pending.delete(callSequence);
             reject(error);
-          }
+          };
+          void acknowledgmentsReady.promise.then(() => {
+            if (!pending.has(callSequence)) return;
+            try {
+              Reflect.apply(reducer, db.reducers, [
+                { ...args, sequence: callSequence },
+              ]).then(() => {
+                pending.delete(callSequence);
+                resolve();
+              }, fail);
+            } catch (error) {
+              fail(error);
+            }
+          }, fail);
         }),
     ]),
-  ) as DbConnection["reducers"];
+  ) as ConnectionSession["reducers"];
 
   return { db, reducers, subscriptions: new Set() };
 }
@@ -424,21 +469,33 @@ export function SpacetimeDBProvider(props: {
   // belong to the same instance.
   const builder = props.connectionBuilder;
   let waiting = Promise.withResolvers<ConnectionSession>();
-  let lost = Promise.withResolvers<void>();
-  const [connection, setConnection] = createSignal(waiting.promise);
+  let lost = Promise.withResolvers<Error | undefined>();
+  const listeners = new Set<() => void>();
+  // Transport readiness is not reactive data. Existing tables keep their last
+  // snapshot while new subscriptions and reducer calls await this promise.
+  const connection: ConnectionSource = {
+    ready: () => waiting.promise,
+    subscribe(listener) {
+      listeners.add(listener);
+      listener();
+      return () => listeners.delete(listener);
+    },
+  };
 
   if (import.meta.env.SSR) {
     let attempt: DbConnection | undefined;
     builder
       .onConnect((next) => waiting.resolve(createSession(next, lost.promise)))
       .onConnectError((_ctx, error) => waiting.reject(error))
-      .onDisconnect(() => {
-        lost.resolve();
-        waiting.reject(new Error("SpacetimeDB disconnected while connecting."));
+      .onDisconnect((_ctx, error) => {
+        lost.resolve(error);
+        waiting.reject(
+          error ?? new Error("SpacetimeDB disconnected while connecting."),
+        );
       });
     attempt = builder.build();
     onCleanup(() => {
-      lost.resolve();
+      lost.resolve(undefined);
       attempt?.disconnect();
     });
     return (
@@ -484,26 +541,29 @@ export function SpacetimeDBProvider(props: {
       retryDelay = 1_000;
       const session = createSession(next, lost.promise);
       waiting.resolve(session);
-      setConnection(Promise.resolve(session));
     })
     .onConnectError((ctx) => {
       if (disposed || ctx !== attempt || attempt.isDisconnectRequested) return;
       scheduleReconnect();
     })
-    .onDisconnect((ctx) => {
+    .onDisconnect((ctx, error) => {
       if (disposed || ctx !== attempt) return;
-      lost.resolve();
+      lost.resolve(error);
       if (attempt.isDisconnectRequested) return;
-      lost = Promise.withResolvers<void>();
+      lost = Promise.withResolvers<Error | undefined>();
+      const previous = waiting;
       waiting = Promise.withResolvers<ConnectionSession>();
-      setConnection(waiting.promise);
+      // Calls still waiting for their first connection follow the next attempt.
+      // An already resolved session remains settled and rejects its own calls.
+      previous.resolve(waiting.promise);
+      for (const listener of listeners) listener();
       scheduleReconnect();
     });
 
   buildConnection();
   onCleanup(() => {
     disposed = true;
-    lost.resolve();
+    lost.resolve(undefined);
     if (retryTimer !== undefined) clearTimeout(retryTimer);
     attempt?.disconnect();
   });
@@ -519,18 +579,31 @@ export function useSpacetimeDB() {
   return connection;
 }
 
-export function useReducers(): DbConnection["reducers"] {
+export function useReducers(): Reducers {
   const connection = useSpacetimeDB();
   return Object.fromEntries(
     Object.keys(reducerDefinitions).map((name) => [
       name,
-      async (args: unknown) => {
-        const session = await connection();
-        const reducer = session.reducers[name as keyof typeof session.reducers];
-        return Reflect.apply(reducer, session.reducers, [args]);
+      (args: object) => {
+        const [acknowledged, setAcknowledged] = createSignal(false);
+        const abort = new AbortController();
+        // Capture the calling action before any asynchronous connection wait.
+        // The synchronous event callback joins its cache delivery to that action.
+        const confirmed = until(acknowledged, { signal: abort.signal });
+        const completed = connection.ready().then((session) => {
+          const reducer =
+            session.reducers[name as keyof typeof session.reducers];
+          return Reflect.apply(reducer, session.reducers, [
+            args,
+            () => setAcknowledged(true),
+          ]);
+        });
+        return Promise.all([confirmed, completed])
+          .then(() => {})
+          .finally(() => abort.abort());
       },
     ]),
-  ) as DbConnection["reducers"];
+  ) as Reducers;
 }
 
 export function useTable<Q extends AnyQuery>(
@@ -543,104 +616,93 @@ export function useTable<Q extends AnyQuery>(
       throw new Error("useTable does not support semijoin queries");
     }
 
-    const ready = connection();
-    if (import.meta.env.SSR) return () => serverRows(ready, current);
+    if (import.meta.env.SSR)
+      return () => serverRows(connection.ready(), current);
 
     const [rows, setRows] = createSignal<readonly QueryRow<Q>[] | Error>();
     // Resolve the first snapshot in the subscription callback's update.
     const first = new SyncPromise<readonly QueryRow<Q>[]>();
     let disposed = false;
     let initialized = false;
-    let publicationQueued = false;
-    let subscription: ReturnType<typeof retainSubscription> | undefined;
-    let detach = () => {};
+    let detachSession = () => {};
+    const stop = connection.subscribe(() => {
+      detachSession();
+      let active = true;
+      let subscription: ReturnType<typeof retainSubscription> | undefined;
+      let detach = () => {};
 
-    const fail = (cause: unknown) => {
-      if (disposed) return;
-      publicationQueued = false;
-      const error =
-        cause instanceof Error
-          ? cause
-          : new Error("SpacetimeDB subscription failed");
-      setRows(error);
-      if (!initialized) first.reject(error);
-      detach();
-      subscription?.release();
-    };
+      const fail = (cause: unknown) => {
+        if (disposed || !active) return;
+        const error =
+          cause instanceof Error
+            ? cause
+            : new Error("SpacetimeDB subscription failed");
+        setRows(error);
+        if (!initialized) first.reject(error);
+        detach();
+        subscription?.release();
+      };
 
-    void ready
-      .then((session) => {
-        if (disposed) return;
-        const db = session.db;
-        const table = db.db[
-          getQueryAccessorName(current) as keyof typeof db.db
-        ] as {
-          onInsert(callback: () => void): void;
-          onDelete(callback: () => void): void;
-          onUpdate(callback: () => void): void;
-          removeOnInsert(callback: () => void): void;
-          removeOnDelete(callback: () => void): void;
-          removeOnUpdate(callback: () => void): void;
-        };
-        const publishRows = () => {
-          if (disposed) return;
-          try {
-            const next = readRows(db, current);
-            setRows(next);
-            if (!initialized) {
-              initialized = true;
-              first.resolve(next);
+      void connection
+        .ready()
+        .then((session) => {
+          if (disposed || !active) return;
+          const db = session.db;
+          const table = db.db[
+            getQueryAccessorName(current) as keyof typeof db.db
+          ] as {
+            onInsert(callback: () => void): void;
+            onDelete(callback: () => void): void;
+            onUpdate(callback: () => void): void;
+            removeOnInsert(callback: () => void): void;
+            removeOnDelete(callback: () => void): void;
+            removeOnUpdate(callback: () => void): void;
+          };
+          const publishRows = () => {
+            if (disposed || !active) return;
+            try {
+              const next = readRows(db, current);
+              setRows(next);
+              if (!initialized) {
+                initialized = true;
+                first.resolve(next);
+              }
+            } catch (error) {
+              fail(error);
             }
-          } catch (error) {
-            fail(error);
-          }
-        };
-        const queuePublication = () => {
-          if (disposed || publicationQueued) return;
-          publicationQueued = true;
-          // Temporary timing workaround for SpacetimeDB 2.10.1: row callbacks run
-          // before the native reducer Promise resolves. Our session wrapper and
-          // async useReducers add two more Promise reactions. Three microtasks put
-          // these writes before action resumption, but their Solid flush after it,
-          // allowing the action to adopt the cache update. This depends on the
-          // current Promise chain; remove once synchronous reducer callbacks or
-          // explicit external-delivery entanglement are available.
-          queueMicrotask(() =>
-            queueMicrotask(() =>
-              queueMicrotask(() => {
-                if (!publicationQueued) return;
-                publicationQueued = false;
-                publishRows();
-              }),
-            ),
-          );
-        };
-        detach = () => {
-          table.removeOnInsert(queuePublication);
-          table.removeOnDelete(queuePublication);
-          table.removeOnUpdate(queuePublication);
-        };
+          };
+          detach = () => {
+            table.removeOnInsert(publishRows);
+            table.removeOnDelete(publishRows);
+            table.removeOnUpdate(publishRows);
+          };
 
-        subscription = retainSubscription(session, current, fail);
-        // A cached unique row proves only the initial snapshot. Start streaming
-        // cache changes once our subscription applies, so a supplier losing the
-        // row during handoff cannot publish an incomplete result.
-        if (subscription.ready !== subscription.applied)
-          subscription.ready.then(publishRows, fail);
-        subscription.applied.then(() => {
-          if (disposed) return;
-          table.onInsert(queuePublication);
-          table.onDelete(queuePublication);
-          table.onUpdate(queuePublication);
-          publishRows();
-        }, fail);
-      })
-      .catch(fail);
+          subscription = retainSubscription(session, current, fail);
+          // A cached unique row proves only the initial snapshot. Start streaming
+          // cache changes once our subscription applies, so a supplier losing the
+          // row during handoff cannot publish an incomplete result.
+          if (subscription.ready !== subscription.applied)
+            subscription.ready.then(publishRows, fail);
+          subscription.applied.then(() => {
+            if (disposed || !active) return;
+            table.onInsert(publishRows);
+            table.onDelete(publishRows);
+            table.onUpdate(publishRows);
+            publishRows();
+          }, fail);
+        })
+        .catch(fail);
 
+      detachSession = () => {
+        active = false;
+        detach();
+        subscription?.release();
+      };
+    });
     onCleanup(() => {
       disposed = true;
-      detach();
-      subscription?.release();
+      stop();
+      detachSession();
     });
 
     return () => {

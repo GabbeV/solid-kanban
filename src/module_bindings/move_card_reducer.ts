@@ -11,10 +11,10 @@ import {
 } from "spacetimedb";
 
 export default {
-  operationId: __t.string(),
+  sequence: __t.u64(),
   boardId: __t.string(),
   actor: __t.string(),
   id: __t.string(),
-  columnId: __t.string(),
+  laneId: __t.string(),
   orderKey: __t.string(),
 };

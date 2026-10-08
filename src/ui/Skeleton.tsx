@@ -5,6 +5,7 @@ export function Skeleton(props: {
   height: number;
   width?: number;
   circle?: boolean;
+  radius?: keyof typeof radius;
   variant?: "border" | "background";
 }) {
   return (
@@ -60,6 +61,18 @@ export function Skeleton(props: {
               ${colors.soft} 60%
             );
             background-size: 300% 100%;
+          `,
+        props.radius === "control" &&
+          css`
+            border-radius: ${radius.control}px;
+          `,
+        props.radius === "card" &&
+          css`
+            border-radius: ${radius.card}px;
+          `,
+        props.radius === "dialog" &&
+          css`
+            border-radius: ${radius.dialog}px;
           `,
         props.circle &&
           css`

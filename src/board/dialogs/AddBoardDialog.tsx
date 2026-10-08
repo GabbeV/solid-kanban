@@ -1,11 +1,5 @@
 import { css } from "@csslit/core";
-import {
-  Show,
-  action,
-  createOptimistic,
-  createSignal,
-  createStore,
-} from "solid-js";
+import { Show, action, createSignal, createStore } from "solid-js";
 import { space } from "#/theme.ts";
 import { Button } from "#/ui/Button.tsx";
 import { Dialog } from "#/ui/Dialog.tsx";
@@ -20,36 +14,26 @@ export function AddBoardDialog(props: { onClose: () => void }) {
   const reducers = useReducers();
   const { name } = useName();
   const [draft, setDraft] = createStore({ title: "", description: "" });
-  const [pending, setPending] = createOptimistic(false);
   const [error, setError] = createSignal<string>();
   let boardId: string | undefined;
-  let operationId: string | undefined;
   const addBoard = action(function* (event: {
     preventDefault(): void;
     currentTarget: HTMLFormElement;
   }) {
     event.preventDefault();
-    if (pending()) return;
     const fields = new FormData(event.currentTarget);
-    setPending(true);
-    setError(undefined);
     boardId ??= crypto.randomUUID();
-    operationId ??= crypto.randomUUID();
     try {
       yield reducers.createBoard({
         boardId,
-        operationId,
         actor: name(),
         title: String(fields.get("title")),
         description: String(fields.get("description")),
       });
+      setError(undefined);
       props.onClose();
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Couldn't confirm the new board.",
-      );
+    } catch {
+      setError("Creation not confirmed.");
     }
   });
   return (
@@ -62,7 +46,7 @@ export function AddBoardDialog(props: { onClose: () => void }) {
           gap: ${space.lg}px;
         `}
       >
-        <Field label="Board name">
+        <Field label="Title">
           <Input
             name="title"
             value={draft.title}
@@ -71,8 +55,8 @@ export function AddBoardDialog(props: { onClose: () => void }) {
                 draft.title = event.currentTarget.value;
               })
             }
-            disabled={pending()}
-            placeholder="Board name"
+
+            placeholder="Title"
             maxlength={80}
             required
             autofocus
@@ -87,12 +71,12 @@ export function AddBoardDialog(props: { onClose: () => void }) {
                 draft.description = event.currentTarget.value;
               })
             }
-            disabled={pending()}
+
             placeholder="Optional description"
             maxlength={500}
           />
         </Field>
-        <Show when={error() && !pending()}>
+        <Show when={error()}>
           <Notice role="alert">{error()}</Notice>
         </Show>
         <div
@@ -102,7 +86,7 @@ export function AddBoardDialog(props: { onClose: () => void }) {
             gap: ${space.sm}px;
           `}
         >
-          <Button type="submit" variant="primary" disabled={pending()}>
+          <Button type="submit" variant="primary">
             <span>Add</span>
           </Button>
         </div>

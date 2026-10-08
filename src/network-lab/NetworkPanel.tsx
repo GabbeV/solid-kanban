@@ -1,167 +1,28 @@
 import { css } from "@csslit/core";
-import { For, Show, createSignal, onCleanup, onSettled } from "solid-js";
+import { Show, createSignal, onCleanup, onSettled } from "solid-js";
 import { Button } from "#/ui/Button.tsx";
-import { Select } from "#/ui/Select.tsx";
 import { Icon } from "#/ui/Icon.tsx";
-import { colors, fontSize, space, radius, breakpoints } from "#/theme.ts";
-import type { NetworkLab, NetworkPacket, NetworkRow } from "./core.ts";
-import {
-  saveNetworkSettings,
-  transitDurations,
-  speedVariations,
-} from "./settings.ts";
+import { colors, fontSize, space, breakpoints, networkLab } from "#/theme.ts";
+import type { NetworkLab, NetworkSettings } from "./core.ts";
+import { saveNetworkSettings } from "./settings.ts";
+
+import { NetworkControls } from "./NetworkControls";
+import { NetworkTimeline } from "./NetworkTimeline";
 
 // Borders (2), header (56), content padding (22), axis (8), gap (8),
-// and two channel rows (32 + 4 + 32). The wrapped header adds 37px.
-const minimumHeight = 164;
-const wrappedMinimumHeight = 201;
-const headerWrapWidth = 480;
+// and exactly two channel rows. The wrapped header adds a 25px row + 12px gap.
+const minimumHeight =
+  2 +
+  56 +
+  2 * (space.md - 1) +
+  fontSize.caption +
+  space.sm +
+  2 * networkLab.trafficRowHeight +
+  space.xs;
+const wrappedMinimumHeight = minimumHeight + 25 + space.md;
+
 const sizeStorageKey = "solid-kanban:network-lab:size";
 const openStorageKey = "solid-kanban:network-lab:open";
-
-function Packet(props: { packet: NetworkPacket }) {
-  const position = () =>
-    props.packet.direction === "in"
-      ? 1 - props.packet.progress
-      : props.packet.progress;
-  return (
-    <span
-      aria-hidden="true"
-      style={{
-        left: `${position() * 100}%`,
-        transform: `translate(${-position() * 100}%, -50%)`,
-      }}
-      class={[
-        css`
-          position: absolute;
-          top: 50%;
-          left: 0;
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: ${colors.accent};
-          box-shadow: 0 0 0 2px ${colors.paper};
-          transform: translateY(-50%);
-        `,
-        props.packet.direction === "in" &&
-          css`
-            background: ${colors.pending};
-          `,
-      ]}
-    />
-  );
-}
-
-function TrafficRow(props: {
-  row: NetworkRow;
-  packets: readonly NetworkPacket[];
-}) {
-  return (
-    <div
-      class={[
-        css`
-          display: grid;
-          grid-template-columns: minmax(0, min(344px, 40%)) minmax(0, 1fr);
-          align-items: center;
-          gap: ${space.md}px;
-          padding: ${space.sm - 1}px;
-          border: 1px solid transparent;
-          border-radius: ${radius.small}px;
-          background: ${colors.canvas};
-        `,
-        props.row.state === "error" &&
-          css`
-            border-color: ${colors.dangerBorder};
-            background: ${colors.dangerSurface};
-          `,
-      ]}
-    >
-      <span
-        title={props.row.label}
-        class={css`
-          display: flex;
-          align-items: center;
-          gap: ${space.sm}px;
-          min-width: 0;
-          font-size: ${fontSize.body}px;
-          color: ${colors.ink};
-        `}
-      >
-        <span
-          class={[
-            css`
-              flex: none;
-              padding: ${space.xs}px;
-              border-radius: ${radius.small}px;
-              background: ${colors.blueSurface};
-              color: ${colors.blueText};
-              font-size: ${fontSize.caption}px;
-              font-weight: 600;
-              white-space: nowrap;
-            `,
-            props.row.direction === "in" &&
-              css`
-                background: ${colors.goldSurface};
-                color: ${colors.goldText};
-              `,
-          ]}
-        >
-          {props.row.kind === "websocket"
-            ? props.row.direction === "out"
-              ? "WS →"
-              : "WS ←"
-            : "HTTP"}
-        </span>
-        <span
-          class={css`
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            color: ${colors.muted};
-          `}
-        >
-          {props.row.label}
-        </span>
-      </span>
-      <div
-        class={css`
-          position: relative;
-          min-width: 0;
-          height: 16px;
-          border-left: 1px solid ${colors.borderHover};
-          border-right: 1px solid ${colors.borderHover};
-          background: repeating-linear-gradient(
-            90deg,
-            transparent 0,
-            transparent calc(25% - 1px),
-            ${colors.borderSubtle} calc(25% - 1px),
-            ${colors.borderSubtle} 25%
-          );
-
-          &::before {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 2px;
-            border-radius: 1px;
-            background: ${colors.border};
-            transform: translateY(-50%);
-          }
-        `}
-      >
-        <For
-          each={props.packets.filter((packet) => packet.rowId === props.row.id)}
-          keyed={(packet) => packet.id}
-        >
-          {(packet) => <Packet packet={packet()} />}
-        </For>
-      </div>
-    </div>
-  );
-}
 
 export function NetworkPanel(props: { lab?: NetworkLab }) {
   let dialog!: HTMLDialogElement;
@@ -263,11 +124,11 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
     onCleanup(props.lab.subscribe(() => setSnapshot(props.lab!.snapshot())));
   }
 
-  const configure = (next: { delayMs?: number; jitter?: number }) => {
+  const configure = (next: Partial<NetworkSettings>) => {
     if (!props.lab) return;
     props.lab.configure(next);
-    const { delayMs, jitter } = props.lab.snapshot();
-    setSaveFailed(!saveNetworkSettings({ delayMs, jitter }));
+    const { delayMs, jitter, faultRate } = props.lab.snapshot();
+    setSaveFailed(!saveNetworkSettings({ delayMs, jitter, faultRate }));
   };
 
   const toggle = () => {
@@ -341,7 +202,7 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
             max-height: calc(100% - ${2 * space.lg}px);
             border-radius: ${space.lg}px;
 
-            @media (max-width: ${headerWrapWidth + 2 + 2 * space.lg}px) {
+            @media (max-width: ${networkLab.headerWrapWidth + 2 + 2 * space.lg}px) {
               --network-lab-min-height: ${wrappedMinimumHeight}px;
             }
             @media (max-width: ${breakpoints.phone}px) {
@@ -355,7 +216,7 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
           `,
         open() &&
           size().width !== undefined &&
-          size().width! <= headerWrapWidth + 2 &&
+          size().width! <= networkLab.headerWrapWidth + 2 &&
           css`
             --network-lab-min-height: ${wrappedMinimumHeight}px;
           `,
@@ -373,12 +234,12 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
         when={open()}
         fallback={
           <Button
-            variant="ghost"
+            variant={snapshot().disconnected ? "danger-ghost" : "ghost"}
             pad="md"
             aria-expanded="false"
             onClick={toggle}
           >
-            <Icon name="activity" />
+            <Icon name={snapshot().disconnected ? "unplug" : "activity"} />
             Network lab
             <span
               class={css`
@@ -386,9 +247,11 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
                 font-size: ${fontSize.caption}px;
               `}
             >
-              {snapshot().delayMs === 0
-                ? "Real speed"
-                : `${snapshot().delayMs / 1000}s`}
+              {snapshot().disconnected
+                ? "Disconnected"
+                : snapshot().delayMs === 0
+                  ? "Real speed"
+                  : `${snapshot().delayMs / 1000}s`}
             </span>
           </Button>
         }
@@ -460,160 +323,16 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
             }
           `}
         />
-        <header
-          class={css`
-            display: grid;
-            flex: none;
-            align-items: center;
-            grid-template-columns: minmax(0, 1fr) auto auto;
-            gap: ${space.md}px;
-            padding: ${space.md - 1}px;
-            border-bottom: 1px solid ${colors.borderSubtle};
-            background: ${colors.canvas};
-
-            @container (max-width: ${headerWrapWidth}px) {
-              grid-template-columns: minmax(0, 1fr) auto;
-            }
-          `}
-        >
-          <div
-            class={css`
-              grid-column: 1;
-              grid-row: 1;
-              display: flex;
-              align-items: center;
-              gap: ${space.md}px;
-              min-width: 0;
-            `}
-          >
-            <span
-              class={css`
-                display: grid;
-                place-items: center;
-                flex: none;
-                padding: ${space.xs}px;
-                border-radius: ${radius.small}px;
-                color: ${colors.accent};
-                background: ${colors.soft};
-              `}
-            >
-              <Icon name="activity" />
-            </span>
-            <div
-              class={css`
-                display: flex;
-                align-items: center;
-                flex-wrap: wrap;
-                gap: ${space.sm}px;
-                min-width: 0;
-              `}
-            >
-              <h2
-                class={css`
-                  font-size: ${fontSize.control}px;
-                  font-weight: 650;
-                `}
-              >
-                Network lab
-              </h2>
-              <span
-                class={css`
-                  font-size: ${fontSize.caption}px;
-                  color: ${colors.muted};
-                `}
-              >
-                {snapshot().packets.length} in flight
-              </span>
-            </div>
-          </div>
-          <div
-            role="group"
-            aria-label="Delay settings"
-            class={css`
-              grid-column: 2;
-              grid-row: 1;
-              display: flex;
-              align-items: center;
-              min-width: 0;
-              gap: ${space.sm}px;
-
-              @container (max-width: ${headerWrapWidth}px) {
-                grid-column: 1 / -1;
-                grid-row: 2;
-                display: grid;
-                grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
-              }
-            `}
-          >
-            <span
-              class={css`
-                font-size: ${fontSize.caption}px;
-                color: ${colors.muted};
-              `}
-            >
-              Delay
-            </span>
-            <Select
-              fitContent
-              aria-label="One-way delay"
-              value={snapshot().delayMs}
-              onChange={(event) =>
-                configure({ delayMs: Number(event.currentTarget.value) })
-              }
-            >
-              <For each={transitDurations}>
-                {(duration) => (
-                  <option value={duration}>
-                    {duration === 0
-                      ? "Real speed"
-                      : duration < 1000
-                        ? `${duration} ms`
-                        : `${duration / 1000} ${duration === 1000 ? "second" : "seconds"}`}
-                  </option>
-                )}
-              </For>
-            </Select>
-            <Select
-              fitContent
-              aria-label="Speed variation"
-              value={snapshot().jitter}
-              onChange={(event) =>
-                configure({ jitter: Number(event.currentTarget.value) })
-              }
-            >
-              <For each={speedVariations}>
-                {(variation) => (
-                  <option value={variation}>
-                    {variation === 0 ? "Consistent" : `±${variation * 100}%`}
-                  </option>
-                )}
-              </For>
-            </Select>
-          </div>
-          <div
-            class={css`
-              grid-column: 3;
-              grid-row: 1;
-              display: flex;
-
-              @container (max-width: ${headerWrapWidth}px) {
-                grid-column: 2;
-              }
-            `}
-          >
-            <Button
-              variant="ghost"
-              pad="sm"
-              iconOnly
-              aria-label="Close Network lab"
-              aria-expanded="true"
-              title="Minimize network lab"
-              onClick={toggle}
-            >
-              <Icon name="down" />
-            </Button>
-          </div>
-        </header>
+        <NetworkControls
+          snapshot={snapshot()}
+          onConfigure={configure}
+          onDisconnect={() => {
+            const lab = props.lab;
+            if (lab) lab.setDisconnected(!lab.snapshot().disconnected);
+          }}
+          onKill={() => props.lab?.killConnections()}
+          onClose={toggle}
+        />
         <Show when={saveFailed()}>
           <p
             class={css`
@@ -625,75 +344,7 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
             Settings could not be saved in this browser.
           </p>
         </Show>
-        <div
-          class={css`
-            display: flex;
-            flex: 1;
-            flex-direction: column;
-            min-height: 0;
-            min-width: 0;
-            padding: ${space.md - 1}px;
-            gap: ${space.sm}px;
-          `}
-        >
-          <div
-            class={css`
-              display: grid;
-              flex: none;
-              grid-template-columns: minmax(0, min(344px, 40%)) minmax(0, 1fr);
-              gap: ${space.md}px;
-              padding: 0 ${space.sm}px;
-              color: ${colors.muted};
-              font-size: ${fontSize.caption}px;
-            `}
-          >
-            <span>Connection</span>
-            <span
-              class={css`
-                display: flex;
-                justify-content: space-between;
-                gap: ${space.sm}px;
-              `}
-            >
-              <span>Client</span>
-              <span>Server</span>
-            </span>
-          </div>
-          <div
-            class={css`
-              display: flex;
-              flex-direction: column;
-              min-height: 0;
-              min-width: 0;
-              overflow: auto;
-              flex: 1;
-              gap: ${space.xs}px;
-            `}
-          >
-            <For each={snapshot().rows}>
-              {(row) => <TrafficRow row={row} packets={snapshot().packets} />}
-            </For>
-            <Show when={snapshot().rows.length === 0}>
-              <div
-                class={css`
-                  display: flex;
-                  flex: 1;
-                  align-items: center;
-                  justify-content: center;
-                  gap: ${space.sm}px;
-                  padding: ${space.lg}px;
-                  border: 1px dashed ${colors.border};
-                  border-radius: ${radius.card}px;
-                  color: ${colors.muted};
-                  font-size: ${fontSize.body}px;
-                `}
-              >
-                <Icon name="activity" />
-                No network activity
-              </div>
-            </Show>
-          </div>
-        </div>
+        <NetworkTimeline rows={snapshot().rows} packets={snapshot().packets} />
       </Show>
     </dialog>
   );
