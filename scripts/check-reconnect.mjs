@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 for (const type of [chromium, firefox]) {
   const browser = await type.launch();
+
   try {
     const page = await browser.newPage();
     const errors = [];
@@ -22,6 +23,7 @@ for (const type of [chromium, firefox]) {
         ({ id, title }) => document.getElementById(id)?.textContent.includes(title),
         { id, title },
       );
+
     await page.evaluate(() => window.fixture.add("existing"));
     await page.waitForFunction(() => window.fixture.registrations.length === 1);
     assert.equal(await value("existing"), "Pending");

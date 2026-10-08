@@ -24,12 +24,14 @@ const lab = createNetworkLab({
   interceptWebSocket: (url) => url.pathname === "/network-lab-check",
   initialSettings: readNetworkSettings(),
 });
+
 window.networkLab = lab;
 window.waitForPackets = (count, direction) =>
   new Promise((resolve) => {
     const ready = () =>
       lab.snapshot().packets.filter((packet) => packet.direction === direction).length === count;
     if (ready()) return resolve();
+
     const stop = lab.subscribe(() => {
       if (ready()) {
         stop();

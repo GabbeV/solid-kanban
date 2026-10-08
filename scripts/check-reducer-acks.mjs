@@ -4,11 +4,13 @@ const browser = await chromium.launch();
 const context = await browser.newContext({
   permissions: ["local-network-access"],
 });
+
 const control = await context.newPage();
 const page = await context.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.stack));
 let boardId;
+
 try {
   await control.route("**/__ack-control", (r) =>
     r.fulfill({ contentType: "text/html", body: "<!doctype html>" }),
@@ -24,6 +26,7 @@ try {
         .onConnectError((_, e) => reject(e))
         .build(),
     );
+
     window.db = db;
     const id = crypto.randomUUID();
     await db.reducers.createBoard({
@@ -33,6 +36,7 @@ try {
       description: "",
       sequence: 0n,
     });
+
     return id;
   });
   await page.route("**/__event-ack?*", (r) =>
@@ -73,6 +77,7 @@ try {
       return e.message;
     }
   });
+
   assert.match(error, /no longer exists/);
   assert.equal(
     await page.evaluate(() => window.events.length),

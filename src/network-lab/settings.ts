@@ -10,6 +10,7 @@ export const faultRates = [0, 0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.25, 0.5, 1]
 export function readNetworkSettings(): NetworkSettings {
   try {
     const saved = JSON.parse(localStorage.getItem(key) ?? "null");
+
     return {
       delayMs: delayOptions.includes(saved?.delayMs) ? saved.delayMs : 0,
       jitter: speedVariations.includes(saved?.jitter) ? saved.jitter : 0,
@@ -23,6 +24,7 @@ export function readNetworkSettings(): NetworkSettings {
 export function saveNetworkSettings(settings: NetworkSettings) {
   try {
     localStorage.setItem(key, JSON.stringify(settings));
+
     return true;
   } catch {
     return false;

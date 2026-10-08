@@ -18,6 +18,7 @@ function Harness() {
     () => tables.board,
     () => boardId,
   );
+
   const releases: Record<string, () => void> = {};
   const run = action(function* (title: string) {
     yield reducers.editBoard({
@@ -30,6 +31,7 @@ function Harness() {
       releases[title] = resolve;
     });
   });
+
   const fail = action(function* () {
     yield reducers.moveCard({
       boardId,
@@ -39,6 +41,7 @@ function Harness() {
       orderKey: "8",
     });
   });
+
   const noop = action(function* () {
     yield reducers.deleteCard({
       boardId,
@@ -46,13 +49,16 @@ function Harness() {
       id: "already-gone",
     });
   });
+
   Object.assign(window, { fixture: { run, fail, noop, releases } });
+
   return (
     <Loading fallback={<p id="title">Loading</p>}>
       <p id="title">{board()?.title}</p>
     </Loading>
   );
 }
+
 function App() {
   return (
     <SpacetimeDBProvider connectionBuilder={builder}>
@@ -60,4 +66,5 @@ function App() {
     </SpacetimeDBProvider>
   );
 }
+
 render(() => <App />, document.getElementById("root")!);

@@ -25,6 +25,7 @@ const baselineHeight = { wide: 660, phone: 792 };
 
 export function CardEditor(props: { cardState: CardState; id: string; onClose: () => void }) {
   const card = () => props.cardState.cards.find((card) => card.id === props.id);
+
   return (
     <Dialog
       title="Edit card"
@@ -78,6 +79,7 @@ export function CardEditor(props: { cardState: CardState; id: string; onClose: (
 
 function CardEditorForm(props: { card: ViewCard; cardState: CardState; onClose: () => void }) {
   const lanes = useTable(() => tables.lane.where((lane) => lane.boardId.eq(props.card.boardId)));
+
   const [draft, setDraft] = createStore(
     untrack(() => ({
       laneId: props.card.laneId,
@@ -89,6 +91,7 @@ function CardEditorForm(props: { card: ViewCard; cardState: CardState; onClose: 
       dueDate: props.card.dueDate,
     })),
   );
+
   const failed = () =>
     props.card.moveFailed ||
     props.card.editFailed ||
@@ -96,6 +99,7 @@ function CardEditorForm(props: { card: ViewCard; cardState: CardState; onClose: 
     props.card.archiveFailed ||
     props.card.restoreFailed ||
     props.card.deleteFailed;
+
   const changed = () =>
     draft.laneId !== props.card.laneId ||
     draft.title !== props.card.title ||
@@ -104,6 +108,7 @@ function CardEditorForm(props: { card: ViewCard; cardState: CardState; onClose: 
     draft.priority !== props.card.priority ||
     draft.assignee !== props.card.assignee ||
     draft.dueDate !== props.card.dueDate;
+
   const save = (event: SubmitEvent) => {
     event.preventDefault();
     const card = {
@@ -117,10 +122,13 @@ function CardEditorForm(props: { card: ViewCard; cardState: CardState; onClose: 
           ? props.card.orderKey
           : placementKey(props.cardState.cards, props.card.id, draft.laneId, ""),
     };
+
     const state = props.cardState;
     props.onClose();
+
     return card.createFailed ? state.retryCreateCard(card, true) : state.editCard(card, true);
   };
+
   const discardEdits = () => {
     const id = props.card.id;
     const state = props.cardState;

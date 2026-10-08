@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 
 for (const type of [chromium, firefox]) {
   const browser = await type.launch();
+
   try {
     const page = await browser.newPage({
       viewport: { width: 1440, height: 1000 },
       ...(type === chromium ? { permissions: ["local-network-access"] } : {}),
     });
+
     page.setDefaultTimeout(10000);
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
@@ -27,6 +29,7 @@ for (const type of [chromium, firefox]) {
           lane: el.closest("[data-lane-id]").dataset.laneId,
         })),
       );
+
     const original = await boardCards();
     assert.ok(original.length >= 2);
     await page.getByRole("button", { name: /^Network lab/ }).click();
@@ -54,6 +57,7 @@ for (const type of [chromium, firefox]) {
         { timeout: 3000 },
       );
     }
+
     await page.getByRole("button", { name: "Disconnect", exact: true }).click();
     for (const { id } of moving) {
       const card = page.locator(`[data-lane-id] article[data-card-id="${id}"]`);
@@ -68,12 +72,14 @@ for (const type of [chromium, firefox]) {
         false,
       );
     }
+
     for (const { id } of moving) {
       await page
         .locator(`[data-lane-id] article[data-card-id="${id}"]`)
         .getByRole("button", { name: "Discard changes", exact: true })
         .click();
     }
+
     assert.deepEqual(
       await boardCards(),
       original,

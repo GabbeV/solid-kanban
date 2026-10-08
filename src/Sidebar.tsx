@@ -20,6 +20,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [current, setCurrent] = createOptimistic(() => location.pathname.split("/")[2] ?? "studio");
+
   return (
     <aside
       class={css`

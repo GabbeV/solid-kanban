@@ -18,20 +18,25 @@ export function CardComments(props: { cardId: string; boardId: string }) {
   const comments = useTable(() =>
     tables.comment.where((comment) => comment.cardId.eq(props.cardId)),
   );
+
   const reducers = useReducers();
   const { name } = useName();
+
   const [comment, setComment] = createSignal("");
   const [expanded, setExpanded] = createSignal(false);
   const [commentPending, setCommentPending] = createOptimistic(false);
   const [commentError, setCommentError] = createSignal<string>();
   let previousComment: Parameters<typeof reducers.addComment>[0] | undefined;
+
   const addComment = action(function* (event: Event) {
     event.preventDefault();
     // This composer has one draft and one retry request. Keep its own send
     // serialized so a completion cannot clear text belonging to another send.
     if (commentPending()) return;
+
     const text = comment().trim();
     if (!text) return;
+
     // Retrying unchanged text reuses the comment ID so an uncertain response
     // cannot insert the same comment twice. Edited text starts a new submission.
     const request =
@@ -44,8 +49,10 @@ export function CardComments(props: { cardId: string; boardId: string }) {
             actor: name(),
             text,
           };
+
     previousComment = request;
     setCommentPending(true);
+
     try {
       yield reducers.addComment(request);
       setCommentError(undefined);

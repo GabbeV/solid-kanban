@@ -42,10 +42,12 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
     },
     { ssrSource: "client" },
   );
+
   const [size, setSize] = createSignal<{ height: number; width?: number }>(
     () => {
       try {
         const saved = JSON.parse(localStorage.getItem(sizeStorageKey) ?? "null");
+
         return {
           height: Number.isFinite(saved?.height) && saved.height > 0 ? saved.height : 240,
           width: Number.isFinite(saved?.width) && saved.width > 0 ? saved.width : undefined,
@@ -56,11 +58,14 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
     },
     { ssrSource: "client" },
   );
+
   let resizeStart:
     | { x: number; y: number; height: number; width: number; corner: boolean }
     | undefined;
+
   const startResize = (event: PointerEvent & { currentTarget: HTMLElement }, corner: boolean) => {
     if (event.button !== 0) return;
+
     event.preventDefault();
     const bounds = event.currentTarget.parentElement!.getBoundingClientRect();
     resizeStart = {
@@ -72,8 +77,10 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
+
   const resize = (event: PointerEvent) => {
     if (!resizeStart) return;
+
     const margin = window.innerWidth <= breakpoints.phone ? space.sm : space.lg;
     const availableHeight = window.innerHeight - 2 * margin;
     const availableWidth = window.innerWidth - 2 * margin;
@@ -90,9 +97,12 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
         : size().width,
     });
   };
+
   const endResize = () => {
     if (!resizeStart) return;
+
     resizeStart = undefined;
+
     try {
       localStorage.setItem(sizeStorageKey, JSON.stringify(size()));
       setSaveFailed(false);
@@ -100,6 +110,7 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
       setSaveFailed(true);
     }
   };
+
   const [saveFailed, setSaveFailed] = createSignal(false);
   const [snapshot, setSnapshot] = createSignal(() => props.lab!.snapshot(), {
     ssrSource: "client",
@@ -110,6 +121,7 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
 
   const configure = (next: Partial<NetworkSettings>) => {
     if (!props.lab) return;
+
     props.lab.configure(next);
     const { delayMs, jitter, faultRate } = props.lab.snapshot();
     setSaveFailed(!saveNetworkSettings({ delayMs, jitter, faultRate }));
@@ -119,6 +131,7 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
     if (props.lab) setSnapshot(props.lab.snapshot());
     const next = !open();
     setOpen(next);
+
     try {
       localStorage.setItem(openStorageKey, String(next));
       setSaveFailed(false);
@@ -126,6 +139,7 @@ export function NetworkPanel(props: { lab?: NetworkLab }) {
       setSaveFailed(true);
     }
   };
+
   return (
     <dialog
       popover="manual"

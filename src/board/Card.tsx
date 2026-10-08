@@ -36,6 +36,7 @@ export function Card(props: {
     props.card.archiveFailed ||
     props.card.restoreFailed ||
     props.card.deleteFailed;
+
   const dragging = () => props.drag?.activeId() === props.card.id;
   const hasFooter = () =>
     props.card.priority !== "Normal" ||
@@ -279,6 +280,7 @@ function CardMenu(props: { card: ViewCard; cardState: CardState }) {
     props.card.archiveFailed ||
     props.card.restoreFailed ||
     props.card.deleteFailed;
+
   const menuId = createUniqueId();
   let menu!: HTMLDivElement;
   let trigger!: HTMLButtonElement;
@@ -287,6 +289,7 @@ function CardMenu(props: { card: ViewCard; cardState: CardState }) {
     const path = event.composedPath();
     if (!path.includes(menu) && !path.includes(trigger)) menu.hidePopover();
   };
+
   onCleanup(() => menu?.ownerDocument.removeEventListener("pointerdown", dismissOutside, true));
 
   const toggle = (event: MouseEvent & { currentTarget: HTMLButtonElement }) => {
@@ -298,6 +301,7 @@ function CardMenu(props: { card: ViewCard; cardState: CardState }) {
       menu.hidePopover();
       return;
     }
+
     trigger = event.currentTarget;
     const triggerBounds = trigger.getBoundingClientRect();
     menu.showPopover({ source: trigger });
@@ -306,6 +310,7 @@ function CardMenu(props: { card: ViewCard; cardState: CardState }) {
       triggerBounds.left + bounds.width <= window.innerWidth - space.md
         ? triggerBounds.left
         : triggerBounds.right - bounds.width;
+
     menu.style.left = `${Math.max(space.md, Math.min(left, window.innerWidth - bounds.width - space.md))}px`;
     menu.style.top = `${Math.max(space.md, triggerBounds.bottom + space.xs + bounds.height <= window.innerHeight - space.md ? triggerBounds.bottom + space.xs : triggerBounds.top - bounds.height - space.xs)}px`;
   };
@@ -370,6 +375,7 @@ function CardMenu(props: { card: ViewCard; cardState: CardState }) {
 
           onClick={() => {
             menu.hidePopover();
+
             return props.cardState.archiveCard(props.card);
           }}
         >
@@ -383,6 +389,7 @@ function CardMenu(props: { card: ViewCard; cardState: CardState }) {
 
           onClick={() => {
             menu.hidePopover();
+
             return props.cardState.deleteCard(props.card);
           }}
         >

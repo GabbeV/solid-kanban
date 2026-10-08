@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 
 for (const type of [chromium, firefox]) {
   const browser = await type.launch();
+
   try {
     const page = await browser.newPage({
       viewport: { width: 1200, height: 800 },
     });
+
     const errors = [];
     const delivered = [];
     const servers = [];
@@ -45,8 +47,10 @@ for (const type of [chromium, firefox]) {
         );
       });
       await page.waitForFunction(() => window.networkSocket.readyState === WebSocket.OPEN);
+
       return servers.at(-1);
     };
+
     // Kill a socket with queued frames, another socket, a fetch in transit,
     // and a fetch already waiting for the real server response.
     await connect();
@@ -81,6 +85,7 @@ for (const type of [chromium, firefox]) {
       rows: window.networkLab.snapshot().rows,
       packets: window.networkLab.snapshot().packets,
     }));
+
     assert.equal(killed.close.code, 4000);
     assert.match(killed.close.reason, /Network lab testing error/);
     assert.match(killed.error, /Network lab testing error/);
@@ -103,6 +108,7 @@ for (const type of [chromium, firefox]) {
       name: "Disconnect",
       exact: true,
     });
+
     await disconnect.click();
     await page.waitForFunction(() => window.networkSocket.readyState === WebSocket.CLOSED);
     assert.equal(await disconnect.getAttribute("aria-pressed"), "true");
@@ -121,6 +127,7 @@ for (const type of [chromium, firefox]) {
           }),
         );
       }
+
       window.httpOutcome = "pending";
       void fetch("/network-lab-http-check").then(
         () => (window.httpOutcome = "success"),
@@ -136,6 +143,7 @@ for (const type of [chromium, firefox]) {
       connections: window.blockedConnections,
       http: window.httpOutcome,
     }));
+
     assert.equal(blocked.snapshot.disconnected, true);
     assert.equal(blocked.snapshot.packets.length, 0);
     assert.equal(blocked.opens, 0);
@@ -145,6 +153,7 @@ for (const type of [chromium, firefox]) {
       assert.equal(connection.code, 4000);
       assert.match(connection.reason, /kept disconnected/);
     }
+
     await page.screenshot({
       path: `/tmp/network-disconnected-${type.name()}.png`,
     });

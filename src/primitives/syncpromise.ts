@@ -109,12 +109,14 @@ export class SyncPromise<T> implements PromiseLike<Awaited<T>> {
   static resolve<T>(value: T): SyncPromise<T> {
     const promise = new SyncPromise<T>();
     promise.resolve(value);
+
     return promise;
   }
 
   static reject<T = never>(reason?: unknown): SyncPromise<T> {
     const promise = new SyncPromise<T>();
     promise.reject(reason);
+
     return promise;
   }
 
@@ -154,11 +156,13 @@ export class SyncPromise<T> implements PromiseLike<Awaited<T>> {
         value,
         (value: unknown) => {
           if (called) return;
+
           called = true;
           this.#adopt(value);
         },
         (reason: unknown) => {
           if (called) return;
+
           called = true;
           this.#settle(REJECTED, reason);
         },

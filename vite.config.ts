@@ -9,6 +9,7 @@ export default defineConfig({
       dev: { command: "vp dev", cache: false },
       build: "vp build",
       start: { command: "node scripts/start.mjs", cache: false },
+
       typecheck: "tsc --noEmit",
       check: "vp check",
       "check:fix": { command: "vp check --fix", cache: false },
@@ -16,9 +17,11 @@ export default defineConfig({
       "lint:fix": { command: "vp lint --fix", cache: false },
       format: { command: "vp fmt", cache: false },
       "format:check": "vp fmt --check",
+
       "db:start": { command: "node scripts/database.mjs start", cache: false },
       "db:publish": { command: "node scripts/database.mjs publish", cache: false },
       "db:generate": { command: "node scripts/database.mjs generate", cache: false },
+
       "test:card-order": { command: "node scripts/check-card-order.mjs", cache: false },
       "test:network-dock": { command: "node scripts/check-network-dock.mjs", cache: false },
       "test:network-faults": { command: "node scripts/check-network-faults.mjs", cache: false },

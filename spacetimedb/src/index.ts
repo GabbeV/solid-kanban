@@ -101,6 +101,7 @@ function text(value: string, field: string, max: number, required = true) {
   const text = value.trim();
   if (required && !text) throw new SenderError(`${field} cannot be empty.`);
   if (text.length > max) throw new SenderError(`${field} must be ${max} characters or fewer.`);
+
   return text;
 }
 
@@ -112,6 +113,7 @@ function validate(ctx: Ctx, args: Envelope, requireBoard = true) {
 
 function acknowledge(ctx: Ctx, args: Envelope) {
   if (ctx.connectionId === null) throw new SenderError("A client connection is required.");
+
   // The event is delivered only if this entire reducer transaction commits.
   ctx.db.reducerAck.insert({
     connectionId: ctx.connectionId,
@@ -132,6 +134,7 @@ function logActivity(ctx: Ctx, args: Envelope, message: string) {
 function getCard(ctx: Ctx, args: { id: string; boardId: string }) {
   const row = ctx.db.card.id.find(args.id);
   if (!row || row.boardId !== args.boardId) throw new SenderError("This card no longer exists.");
+
   return row;
 }
 
@@ -140,12 +143,14 @@ export const createBoard = db.reducer(
   (ctx, args) => {
     validate(ctx, args, false);
     acknowledge(ctx, args);
+
     const title = text(args.title, "Title", 80);
     const fields = {
       id: text(args.boardId, "Board ID", 80),
       title,
       description: text(args.description, "Description", 500, false),
     };
+
     const existing = ctx.db.board.id.find(fields.id);
     if (existing) {
       ctx.db.board.id.update({ ...existing, ...fields });
@@ -160,6 +165,7 @@ export const createBoard = db.reducer(
         }),
       );
     }
+
     logActivity(ctx, args, `created the board “${title}”`);
   },
 );
@@ -169,6 +175,7 @@ export const editBoard = db.reducer(
   (ctx, args) => {
     validate(ctx, args);
     acknowledge(ctx, args);
+
     const row = ctx.db.board.id.find(args.boardId)!;
     ctx.db.board.id.update({
       ...row,
@@ -184,15 +191,18 @@ export const createLane = db.reducer(
   (ctx, args) => {
     validate(ctx, args);
     acknowledge(ctx, args);
+
     const fields = {
       id: text(args.id, "Lane ID", 80),
       boardId: args.boardId,
       title: text(args.title, "Lane title", 60),
     };
+
     const existing = ctx.db.lane.id.find(fields.id);
     if (existing) {
       if (existing.boardId !== args.boardId)
         throw new SenderError("This lane ID is already in use.");
+
       ctx.db.lane.id.update({ ...existing, ...fields });
     } else {
       const position =
@@ -200,8 +210,10 @@ export const createLane = db.reducer(
           -1,
           ...Array.from(ctx.db.lane.boardId.filter(args.boardId), (row) => row.position),
         ) + 1;
+
       ctx.db.lane.insert({ ...fields, position });
     }
+
     logActivity(ctx, args, `added the lane “${args.title}”`);
   },
 );
@@ -211,8 +223,10 @@ export const renameLane = db.reducer(
   (ctx, args) => {
     validate(ctx, args);
     acknowledge(ctx, args);
+
     const row = ctx.db.lane.id.find(args.id);
     if (!row || row.boardId !== args.boardId) throw new SenderError("This lane no longer exists.");
+
     ctx.db.lane.id.update({
       ...row,
       title: text(args.title, "Lane title", 60),
@@ -237,6 +251,7 @@ export const createCard = db.reducer(
   (ctx, args) => {
     validate(ctx, args);
     acknowledge(ctx, args);
+
     const target = ctx.db.lane.id.find(args.laneId);
     if (!target || target.boardId !== args.boardId)
       throw new SenderError("This lane no longer exists.");
@@ -248,6 +263,7 @@ export const createCard = db.reducer(
       throw new SenderError("Choose a valid label and priority.");
     if (args.dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(args.dueDate))
       throw new SenderError("Choose a valid due date.");
+
     const fields = {
       id: text(args.id, "Card ID", 80),
       boardId: args.boardId,
@@ -260,13 +276,16 @@ export const createCard = db.reducer(
       dueDate: args.dueDate,
       orderKey: args.orderKey,
     };
+
     const existing = ctx.db.card.id.find(fields.id);
     if (existing) {
       if (existing.boardId !== args.boardId)
         throw new SenderError("This card ID is already in use.");
+
       // A late creation must never overwrite a newer edit or move after reconnect.
       throw new SenderError(duplicateCardError);
     }
+
     ctx.db.card.insert({ ...fields, archived: false });
     logActivity(ctx, args, `added “${args.title}”`);
   },
@@ -288,8 +307,10 @@ export const editCard = db.reducer(
   (ctx, args) => {
     validate(ctx, args);
     acknowledge(ctx, args);
+
     const row = getCard(ctx, args);
     if (row.archived) throw new SenderError("This card was archived. Restore it before editing.");
+
     const target = ctx.db.lane.id.find(args.laneId);
     if (!target || target.boardId !== args.boardId)
       throw new SenderError("The destination lane no longer exists.");
@@ -301,6 +322,7 @@ export const editCard = db.reducer(
       throw new SenderError("Choose a valid label and priority.");
     if (args.dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(args.dueDate))
       throw new SenderError("Choose a valid due date.");
+
     ctx.db.card.id.update({
       ...row,
       laneId: args.laneId,
@@ -326,12 +348,14 @@ export const moveCard = db.reducer(
   (ctx, args) => {
     validate(ctx, args);
     acknowledge(ctx, args);
+
     const row = getCard(ctx, args);
     const target = ctx.db.lane.id.find(args.laneId);
     if (!target || target.boardId !== args.boardId)
       throw new SenderError("The destination lane no longer exists.");
     if (row.archived) throw new SenderError("This card was archived. Restore it before moving.");
     if (!validOrderKey(args.orderKey)) throw new SenderError("Invalid card placement.");
+
     ctx.db.card.id.update({
       ...row,
       laneId: args.laneId,
@@ -346,6 +370,7 @@ export const archiveCard = db.reducer(
   (ctx, args) => {
     validate(ctx, args);
     acknowledge(ctx, args);
+
     const row = getCard(ctx, args);
     ctx.db.card.id.update({ ...row, archived: args.archived });
     logActivity(ctx, args, `${args.archived ? "archived" : "restored"} “${row.title}”`);
@@ -357,6 +382,7 @@ export const addComment = db.reducer(
   (ctx, args) => {
     validate(ctx, args);
     acknowledge(ctx, args);
+
     const row = getCard(ctx, { id: args.cardId, boardId: args.boardId });
     const fields = {
       id: text(args.id, "Comment ID", 80),
@@ -365,12 +391,15 @@ export const addComment = db.reducer(
       author: args.actor,
       text: text(args.text, "Comment", 2000),
     };
+
     const existing = ctx.db.comment.id.find(fields.id);
     if (existing) {
       if (existing.boardId !== args.boardId || existing.cardId !== args.cardId)
         throw new SenderError("This comment ID is already in use.");
+
       return;
     }
+
     ctx.db.comment.insert({
       ...fields,
       createdAt: Number(ctx.timestamp.microsSinceUnixEpoch / 1000n),
@@ -383,12 +412,15 @@ export const deleteCard = db.reducer({ ...envelope, id: t.string() }, (ctx, args
   // Deletion is also successful when an earlier attempt already removed it.
   validate(ctx, args, false);
   acknowledge(ctx, args);
+
   const row = ctx.db.card.id.find(args.id);
   if (row && row.boardId !== args.boardId)
     throw new SenderError("This card belongs to another board.");
+
   for (const comment of Array.from(ctx.db.comment.boardId.filter(args.boardId))) {
     if (comment.cardId === args.id) ctx.db.comment.id.delete(comment.id);
   }
+
   if (row) ctx.db.card.id.delete(row.id);
   if (row) logActivity(ctx, args, `deleted “${row.title}”`);
 });
@@ -396,14 +428,17 @@ export const deleteCard = db.reducer({ ...envelope, id: t.string() }, (ctx, args
 export const deleteLane = db.reducer({ ...envelope, id: t.string() }, (ctx, args) => {
   validate(ctx, args, false);
   acknowledge(ctx, args);
+
   const row = ctx.db.lane.id.find(args.id);
   if (row && row.boardId !== args.boardId)
     throw new SenderError("This lane belongs to another board.");
+
   const cards = Array.from(ctx.db.card.laneId.filter(args.id));
   const cardIds = new Set(cards.map((card) => card.id));
   for (const comment of Array.from(ctx.db.comment.boardId.filter(args.boardId))) {
     if (cardIds.has(comment.cardId)) ctx.db.comment.id.delete(comment.id);
   }
+
   for (const card of cards) ctx.db.card.id.delete(card.id);
   if (row) ctx.db.lane.id.delete(row.id);
   if (row) logActivity(ctx, args, `deleted the lane “${row.title}”`);
@@ -412,15 +447,20 @@ export const deleteLane = db.reducer({ ...envelope, id: t.string() }, (ctx, args
 export const deleteBoard = db.reducer(envelope, (ctx, args) => {
   validate(ctx, args, false);
   acknowledge(ctx, args);
+
   const row = ctx.db.board.id.find(args.boardId);
   for (const comment of Array.from(ctx.db.comment.boardId.filter(args.boardId)))
     ctx.db.comment.id.delete(comment.id);
+
   for (const card of Array.from(ctx.db.card.boardId.filter(args.boardId)))
     ctx.db.card.id.delete(card.id);
+
   for (const lane of Array.from(ctx.db.lane.boardId.filter(args.boardId)))
     ctx.db.lane.id.delete(lane.id);
+
   for (const event of Array.from(ctx.db.activity.boardId.filter(args.boardId)))
     ctx.db.activity.id.delete(event.id);
+
   if (row) ctx.db.board.id.delete(row.id);
 });
 

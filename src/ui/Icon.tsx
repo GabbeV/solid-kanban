@@ -21,6 +21,7 @@ export function Icon(props: { name: string }) {
     props.name === "more" ||
     props.name === "more-vertical" ||
     props.name === "exclamation";
+
   return (
     <svg
       width="11"

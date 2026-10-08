@@ -9,6 +9,7 @@ import { Icon } from "#/ui/Icon.tsx";
 function Packet(props: { packet: NetworkPacket }) {
   const position = () =>
     props.packet.direction === "in" ? 1 - props.packet.progress : props.packet.progress;
+
   return (
     <span
       aria-hidden="true"

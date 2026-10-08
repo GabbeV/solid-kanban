@@ -18,6 +18,7 @@ import { Skeleton } from "#/ui/Skeleton.tsx";
 
 export function Archive(props: ParentProps) {
   const params = useParams();
+
   return (
     <>
       <Loading on={params.boardId ?? "studio"} fallback={<ArchiveSkeleton />}>

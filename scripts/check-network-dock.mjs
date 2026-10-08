@@ -2,11 +2,13 @@ import { chromium, firefox } from "@playwright/test";
 import assert from "node:assert/strict";
 for (const type of [chromium, firefox]) {
   const browser = await type.launch();
+
   try {
     const page = await browser.newPage({
       viewport: { width: 1280, height: 900 },
       ...(type === chromium ? { permissions: ["local-network-access"] } : {}),
     });
+
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto("http://127.0.0.1:3002/b/studio");
@@ -26,6 +28,7 @@ for (const type of [chromium, firefox]) {
         exact: true,
       })
       .boundingBox();
+
     await page.mouse.move(handle.x + handle.width / 2, handle.y + 5);
     await page.mouse.down();
     await page.mouse.move(handle.x + handle.width / 2, handle.y - 95, {
@@ -37,6 +40,7 @@ for (const type of [chromium, firefox]) {
     const corner = await page
       .getByRole("separator", { name: "Resize network lab", exact: true })
       .boundingBox();
+
     await page.mouse.move(corner.x + 12, corner.y + 12);
     await page.mouse.down();
     await page.mouse.move(corner.x + 332, corner.y + 52, { steps: 8 });

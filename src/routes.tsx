@@ -23,22 +23,26 @@ import { colors, fontSize, lineHeight, space } from "#/theme.ts";
 function useClose(fallbackPath?: string) {
   const location = useLocation<{ dialogOpenedFromApp: true }>();
   const navigate = useNavigate();
+
   return () => closeDialog(navigate, location, fallbackPath);
 }
 
 function EditNameDialogRoute() {
   const close = useClose();
+
   return <EditNameDialog onClose={close} />;
 }
 
 function AddBoardDialogRoute() {
   const close = useClose();
+
   return <AddBoardDialog onClose={close} />;
 }
 
 function LaneDialogRoute() {
   const params = useParams();
   const close = useClose();
+
   return <LaneDialog boardId={params.boardId ?? "studio"} onClose={close} />;
 }
 
@@ -49,6 +53,7 @@ function EditLaneDialogRoute() {
     () => tables.lane,
     () => params.laneId ?? "",
   );
+
   return (
     <Show when={lane()}>
       {(item) => <LaneDialog lane={item()} boardId={params.boardId ?? "studio"} onClose={close} />}
@@ -65,6 +70,7 @@ function EditBoardDialogRoute() {
     () => tables.board,
     () => params.boardId ?? "studio",
   );
+
   return (
     <Show when={board()}>
       {(item) => (

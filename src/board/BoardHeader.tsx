@@ -23,8 +23,10 @@ function CardCount(props: { archived: boolean }) {
       card.boardId.eq(params.boardId ?? "studio").and(card.archived.eq(props.archived)),
     ),
   );
+
   const filters = useCardFilters();
   const count = () => cards().filter(filters.matches).length;
+
   return (
     <>
       {count()}
@@ -264,12 +266,14 @@ type Tab = "board" | "activity" | "archive";
 
 function useTab(): () => Tab {
   const matches = useRouteMatches();
+
   return createMemo(() => {
     const chain = matches();
     for (let i = chain.length - 1; i >= 0; i--) {
       const tab = chain[i].route.info?.tab;
       if (tab === "board" || tab === "activity" || tab === "archive") return tab;
     }
+
     return "board" as const;
   });
 }
@@ -279,6 +283,7 @@ function BoardTabs(props: { current: Tab }) {
   const params = useParams();
   const boardId = () => params.boardId ?? "studio";
   const [selected, setSelected] = createOptimistic(() => props.current);
+
   return (
     <nav
       class={css`
@@ -316,6 +321,7 @@ function BoardTabs(props: { current: Tab }) {
 
 function CardFilters() {
   const filters = useCardFilters();
+
   return (
     <div
       class={css`

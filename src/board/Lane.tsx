@@ -203,14 +203,17 @@ function AddCard(props: { lane: db.Lane } & Pick<CardState, "cards" | "createCar
   const [title, setTitle] = createSignal("");
   let button: HTMLButtonElement | undefined;
   let input: HTMLInputElement | undefined;
+
   const close = () => {
     setOpen(false);
     onSettled(() => button?.focus());
   };
+
   const add = (event: SubmitEvent) => {
     event.preventDefault();
     const text = title().trim();
     if (!text) return;
+
     const id = crypto.randomUUID();
     const card = {
       id,
@@ -225,6 +228,7 @@ function AddCard(props: { lane: db.Lane } & Pick<CardState, "cards" | "createCar
       archived: false,
       orderKey: placementKey(props.cards, id, props.lane.id, ""),
     };
+
     setTitle("");
     // Commit the input reset before the creation action holds its update.
     flush();

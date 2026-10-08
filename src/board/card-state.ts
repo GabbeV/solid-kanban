@@ -51,20 +51,24 @@ export function createCardState(archived = false) {
   const boardId = () => params.boardId ?? "studio";
   const reducers = useReducers();
   const { name } = useName();
+
   const serverCards = useTable(() =>
     tables.card.where((card) => card.boardId.eq(boardId()).and(card.archived.eq(archived))),
   );
+
   // Keep reconciliation until the imperative setter follow-up in
   // https://github.com/solidjs/solid/issues/3743#issuecomment-5942237945 is fixed:
   // imperative writes can re-notify an untouched held key and join its action.
   const [localCards, setLocalCards] = createStore<ViewCard[]>((draft) => {
     const remoteCards = serverCards();
+
     return [
       ...remoteCards.map((remote) => {
         const previous = draft.find((card) => card.id === remote.id);
         const moveFailed =
           previous?.moveFailed === true &&
           (previous.laneId !== remote.laneId || previous.orderKey !== remote.orderKey);
+
         return {
           ...remote,
           // Existence confirms creation. Edit/move failures own unsaved values.
@@ -95,6 +99,7 @@ export function createCardState(archived = false) {
       ),
     ];
   }, []);
+
   const [cards, setOptimisticCards] = createOptimisticStore(localCards);
 
   const moveCard = action(function* (request: MoveRequest) {
@@ -103,11 +108,14 @@ export function createCardState(archived = false) {
     setLocalCards((draft) => {
       const card = draft.find((item) => item.id === request.id);
       if (!card) return;
+
       card.moveFailed = false;
     });
+
     setOptimisticCards((draft) => {
       const card = draft.find((item) => item.id === request.id);
       if (!card) return;
+
       card.laneId = request.laneId;
       card.orderKey = request.orderKey;
       card.moveFailed = card.moveFailed === true;
@@ -120,6 +128,7 @@ export function createCardState(archived = false) {
       setLocalCards((draft) => {
         const card = draft.find((item) => item.id === request.id);
         if (!card) return;
+
         card.laneId = request.laneId;
         card.orderKey = request.orderKey;
         card.moveFailed = true;
@@ -138,40 +147,48 @@ export function createCardState(archived = false) {
       assignee: input.assignee,
       dueDate: input.dueDate,
     };
+
     const request = {
       ...fields,
       boardId: input.boardId,
       id: input.id,
       actor: name(),
     };
+
     // Stage the clear for reconciliation; optimism retains the visible error
     // until the retry settles.
     setLocalCards((draft) => {
       const card = draft.find((card) => card.id === request.id);
       if (!card) return;
+
       if (clearErrors) Object.assign(card, clearedFailures);
       else {
         card.editFailed = false;
         card.moveFailed = false;
       }
     });
+
     setOptimisticCards((draft) => {
       const card = draft.find((card) => card.id === request.id);
       if (!card) return;
+
       const failures = clearErrors
         ? clearedFailures
         : {
             editFailed: card.editFailed === true,
             moveFailed: card.moveFailed === true,
           };
+
       Object.assign(card, fields, failures, { saving: true });
     });
+
     try {
       yield reducers.editCard(request);
     } catch {
       setLocalCards((draft) => {
         const card = draft.find((card) => card.id === request.id);
         if (!card) return;
+
         Object.assign(card, fields, { editFailed: true, moveFailed: false });
       });
     }
@@ -179,9 +196,11 @@ export function createCardState(archived = false) {
 
   const createCard = action(function* (input: db.Card) {
     const card = { ...input };
+
     setOptimisticCards((draft) => {
       draft.push({ ...card, saving: true });
     });
+
     try {
       yield reducers.createCard({ ...card, actor: name() });
     } catch {
@@ -196,26 +215,33 @@ export function createCardState(archived = false) {
 
   const retryCreateCard = action(function* (input: ViewCard, clearErrors = false) {
     const card = { ...input, moving: false, saving: false };
+
     // A full save includes placement, so it supersedes a separate move retry.
     const retryEdit = clearErrors || card.editFailed === true;
     const retryMove = !retryEdit && card.moveFailed === true;
+
     setLocalCards((draft) => {
       const previous = draft.find((item) => item.id === card.id);
       if (!previous) return;
+
       if (clearErrors) Object.assign(previous, clearedFailures);
       else previous.createFailed = false;
     });
+
     setOptimisticCards((draft) => {
       const pending = {
         ...card,
         ...(clearErrors && clearedFailures),
         saving: true,
       };
+
       const previous = draft.find((item) => item.id === card.id);
       if (previous) Object.assign(previous, pending);
       else draft.push(pending);
     });
+
     const request = { ...card, actor: name() };
+
     // Pipeline creation before the existing edit/move action. A duplicate only
     // confirms existence; the later action still has to save the local changes.
     const creation = reducers.createCard(request);
@@ -224,6 +250,7 @@ export function createCardState(archived = false) {
       : retryMove
         ? moveCard(request)
         : undefined;
+
     try {
       yield creation;
     } catch (error) {
@@ -235,6 +262,7 @@ export function createCardState(archived = false) {
         });
       }
     }
+
     if (update) yield update;
   });
 
@@ -245,19 +273,23 @@ export function createCardState(archived = false) {
       archived,
       actor: name(),
     };
+
     setOptimisticCards((draft) => {
       const card = draft.find((item) => item.id === request.id);
       if (card) card.saving = true;
     });
+
     try {
       yield reducers.archiveCard(request);
       removeCard(request.id);
+
       return true;
     } catch {
       setLocalCards((draft) => {
         const card = draft.find((item) => item.id === request.id);
         if (card) card[archived ? "archiveFailed" : "restoreFailed"] = true;
       });
+
       return false;
     }
   });
@@ -270,19 +302,23 @@ export function createCardState(archived = false) {
       boardId: input.boardId,
       actor: name(),
     };
+
     setOptimisticCards((draft) => {
       const card = draft.find((item) => item.id === request.id);
       if (card) card.saving = true;
     });
+
     try {
       yield reducers.deleteCard(request);
       removeCard(request.id);
+
       return true;
     } catch {
       setLocalCards((draft) => {
         const card = draft.find((item) => item.id === request.id);
         if (card) card.deleteFailed = true;
       });
+
       return false;
     }
   });
@@ -292,9 +328,11 @@ export function createCardState(archived = false) {
     failure: Exclude<CardFailure, "createFailed" | "editFailed" | "moveFailed"> | "changes",
   ) => {
     const remote = serverCards().find((card) => card.id === id);
+
     setLocalCards((draft) => {
       const card = draft.find((item) => item.id === id);
       if (!card) return;
+
       if (failure === "changes") {
         if (!remote) draft.splice(draft.indexOf(card), 1);
         else
@@ -319,9 +357,11 @@ export function createCardState(archived = false) {
 
   const discardCard = (id: string) => {
     const remote = serverCards().find((card) => card.id === id);
+
     setLocalCards((draft) => {
       const index = draft.findIndex((card) => card.id === id);
       if (index === -1) return;
+
       if (remote) Object.assign(draft[index], remote, clearedFailures);
       else draft.splice(index, 1);
     });

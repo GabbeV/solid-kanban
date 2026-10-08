@@ -21,6 +21,7 @@ export function EditBoardDialog(props: {
 }) {
   const reducers = useReducers();
   const { name } = useName();
+
   const initial = untrack(() => ({
     title: props.board.title,
     description: props.board.description,
@@ -28,11 +29,13 @@ export function EditBoardDialog(props: {
   const [draft, setDraft] = createStore(initial);
   const [error, setError] = createSignal<string>();
   const [deleteError, setDeleteError] = createSignal<string>();
+
   const deleteBoard = action(function* () {
     const request = {
       boardId: props.board.id,
       actor: name(),
     };
+
     try {
       yield reducers.deleteBoard(request);
       setDeleteError(undefined);
@@ -41,6 +44,7 @@ export function EditBoardDialog(props: {
       setDeleteError("Deletion not confirmed.");
     }
   });
+
   const save = action(function* (event: {
     preventDefault(): void;
     currentTarget: HTMLFormElement;
@@ -49,6 +53,7 @@ export function EditBoardDialog(props: {
     const fields = new FormData(event.currentTarget);
     const title = fields.get("title");
     const description = fields.get("description");
+
     try {
       yield reducers.editBoard({
         boardId: props.board.id,
@@ -62,6 +67,7 @@ export function EditBoardDialog(props: {
       setError("Changes not confirmed.");
     }
   });
+
   return (
     <Dialog title="Edit board" onClose={() => props.onClose()}>
       <form

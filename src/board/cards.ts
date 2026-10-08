@@ -24,8 +24,10 @@ export function placementKey(
   const target = cards
     .filter((card) => !card.archived && card.laneId === laneId && card.id !== id)
     .sort(compareCards);
+
   const index = beforeId ? target.findIndex((card) => card.id === beforeId) : target.length;
   if (index < 0) throw new Error("The destination changed. Try moving the card again.");
+
   return keyBetween(
     index ? cardPosition(target[index - 1]) : undefined,
     index < target.length ? cardPosition(target[index]) : undefined,

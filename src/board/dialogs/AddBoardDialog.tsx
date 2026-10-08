@@ -14,9 +14,11 @@ import { Textarea } from "#/ui/Textarea.tsx";
 export function AddBoardDialog(props: { onClose: () => void }) {
   const reducers = useReducers();
   const { name } = useName();
+
   const [draft, setDraft] = createStore({ title: "", description: "" });
   const [error, setError] = createSignal<string>();
   let boardId: string | undefined;
+
   const addBoard = action(function* (event: {
     preventDefault(): void;
     currentTarget: HTMLFormElement;
@@ -26,6 +28,7 @@ export function AddBoardDialog(props: { onClose: () => void }) {
     const title = fields.get("title");
     const description = fields.get("description");
     boardId ??= crypto.randomUUID();
+
     try {
       yield reducers.createBoard({
         boardId,
@@ -39,6 +42,7 @@ export function AddBoardDialog(props: { onClose: () => void }) {
       setError("Creation not confirmed.");
     }
   });
+
   return (
     <Dialog title="Add board" onClose={() => props.onClose()}>
       <form

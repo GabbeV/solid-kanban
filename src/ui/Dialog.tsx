@@ -17,8 +17,10 @@ export function Dialog(props: {
 }) {
   let element!: HTMLDialogElement;
   let disposed = false;
+
   function dismiss() {
     if (!element?.open) return;
+
     element.close();
     const returnFocus = props.returnFocus;
     if (returnFocus)
@@ -27,14 +29,17 @@ export function Dialog(props: {
         if (!document.querySelector("dialog[open]")) returnFocus()?.focus({ preventScroll: true });
       });
   }
+
   function close() {
     dismiss();
     props.onClose();
   }
+
   onCleanup(() => {
     disposed = true;
     dismiss();
   });
+
   return (
     <dialog
       class={css`

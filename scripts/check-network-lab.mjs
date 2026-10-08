@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 
 for (const browserType of [chromium, firefox]) {
   const browser = await browserType.launch();
+
   try {
     const page = await browser.newPage({
       viewport: { width: 1200, height: 800 },
       ...(browserType === chromium ? { permissions: ["local-network-access"] } : {}),
     });
+
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     const receivedOutgoing = [];
@@ -37,6 +39,7 @@ for (const browserType of [chromium, firefox]) {
         },
         { delayMs, jitter, sample },
       );
+
     // Zero variation: a WS echo and HTTP request/response each take one RTT.
     await configure(1000);
     const elapsed = await page.evaluate(async () => {
@@ -44,23 +47,28 @@ for (const browserType of [chromium, firefox]) {
       await new Promise((resolve) => {
         const received = (event) => {
           if (event.data !== "round-trip-check") return;
+
           window.networkSocket.removeEventListener("message", received);
           resolve();
         };
+
         window.networkSocket.addEventListener("message", received);
         window.networkSocket.send("round-trip-check");
       });
       const ws = performance.now() - start;
       const httpStart = performance.now();
       await fetch("/network-lab-http-check");
+
       return { ws, http: performance.now() - httpStart };
     });
+
     for (const [kind, duration] of Object.entries(elapsed)) {
       assert.ok(
         duration >= 1000 && duration < 1500,
         `${kind} should add 1000ms round-trip delay, got ${duration}ms`,
       );
     }
+
     console.log(`PASS (${browserType.name()}): WS and HTTP round-trip timing.`, elapsed);
     await page.evaluate(() => {
       window.networkReceived.length = 0;
@@ -71,6 +79,7 @@ for (const browserType of [chromium, firefox]) {
       if (direction === "in") server.send(label);
       else await page.evaluate((label) => window.networkSocket.send(label), label);
     };
+
     const waitProgress = (direction, progress) =>
       page.waitForFunction(
         ({ direction, progress }) =>
@@ -82,6 +91,7 @@ for (const browserType of [chromium, firefox]) {
         { direction, progress },
         { timeout: 10000 },
       );
+
     const samplePlayback = (direction, kind = "websocket") =>
       page.evaluate(
         ({ direction, kind }) => {
@@ -89,17 +99,21 @@ for (const browserType of [chromium, firefox]) {
           const row = snapshot.rows.find(
             (row) => row.kind === kind && (kind === "http" || row.direction === direction),
           );
+
           const label = [...document.querySelectorAll("[title]")].find((element) =>
             element.textContent.startsWith(
               kind === "http" ? "HTTP" : direction === "in" ? "WS ←" : "WS →",
             ),
           );
+
           const track = label.nextElementSibling;
           const dots = [...track.querySelectorAll("span[aria-hidden=true]")];
           const packets = snapshot.packets.filter((packet) => packet.rowId === row.id);
+
           return packets.map((packet, index) => {
             const dot = dots[index];
             const position = packet.direction === "in" ? 1 - packet.progress : packet.progress;
+
             return {
               ...packet,
               x: dot.getBoundingClientRect().x,
@@ -112,12 +126,14 @@ for (const browserType of [chromium, firefox]) {
         },
         { direction, kind },
       );
+
     // Wait for elapsed animation frames, without seeking or changing dot positions.
     const observe = () =>
       page.evaluate(async () => {
         const start = performance.now();
         while (performance.now() - start < 200) await new Promise(requestAnimationFrame);
       });
+
     const assertPositions = (packets, direction) => {
       for (const [index, packet] of packets.entries()) {
         assert.ok(
@@ -138,6 +154,7 @@ for (const browserType of [chromium, firefox]) {
         }
       }
     };
+
     const toggle = () => page.getByRole("button", { name: /Network lab/ }).click();
     let incomingCount = 0;
     for (const direction of ["in", "out"]) {
@@ -177,6 +194,7 @@ for (const browserType of [chromium, firefox]) {
           .locator('dialog[aria-label="Network lab"] span[aria-hidden=true]')
           .first()
           .elementHandle();
+
         await observe();
         assert.equal(
           await node.evaluate((element) => element.isConnected),
@@ -197,6 +215,7 @@ for (const browserType of [chromium, firefox]) {
           assert.equal(receivedOutgoing.length, outgoingCount);
           assert.deepEqual(receivedOutgoing.slice(-3), labels);
         }
+
         console.log(
           `PASS (${browserType.name()}): ${direction}, variation ${jitter}; playback, shared speed, DOM stability and FIFO delivery.`,
         );

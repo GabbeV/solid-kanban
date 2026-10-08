@@ -54,6 +54,7 @@ export function CardErrors(props: { card: ViewCard; cardState?: CardState; varia
     visible: () => boolean | undefined;
     retry: () => unknown;
   }[];
+
   const visible = () => failures.filter((failure) => failure.visible());
 
   return (

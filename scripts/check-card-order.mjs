@@ -6,8 +6,10 @@ import { keyBetween, orderDigits, positionKey, validOrderKey } from "#/primitive
 
 const uuid = (text) => {
   const hex = createHash("sha256").update(text).digest("hex").slice(0, 32);
+
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 };
+
 const card = (id, orderKey, laneId = "lane") => ({
   id,
   orderKey,
@@ -27,6 +29,7 @@ assert.equal(orderDigits.split("").toSorted().join(""), orderDigits);
 assert.equal(new Set(orderDigits).size, 64);
 for (const key of ["0", "V", "z", "--0", "V-0", "00000000000000018"])
   assert(validOrderKey(key), key);
+
 for (const key of ["", "-", "V-", "a/b", "+", "=", "é", "0\n"]) assert(!validOrderKey(key), key);
 for (const [left, right] of [
   ["-", "V"],
@@ -48,6 +51,7 @@ const ids = [
   "\ud800",
   "A".repeat(80),
 ];
+
 const suffixes = ids.map((id) => positionKey("V", id).slice(1));
 assert.equal(suffixes[0].length, 23, "UUID suffix has a fixed width");
 assert.equal(new Set(suffixes).size, ids.length);
@@ -101,11 +105,13 @@ for (let i = 0; i < positions.length; i++) {
       intervals++;
     }
   }
+
   for (const id of ids) {
     assert(positionKey(keyBetween(undefined, positions[i]), id) < positions[i]);
     assert(positionKey(keyBetween(positions[i], undefined), id) > positions[i]);
   }
 }
+
 let right = cardPosition(b);
 for (let i = 0; i < 1000; i++) {
   const next = card(uuid(`tight-${i}`), keyBetween(cardPosition(a), right));
@@ -122,8 +128,10 @@ const random = (n) => {
   randomState ^= randomState << 13;
   randomState ^= randomState >>> 17;
   randomState ^= randomState << 5;
+
   return (randomState >>> 0) % n;
 };
+
 let operations = 0;
 let failures = 0;
 let checks = 0;
@@ -132,11 +140,13 @@ for (let run = 0; run < 100; run++) {
     ...card(uuid(`card-${i}`), orderDigits[(i + 1) * 7]),
     version: 0,
   }));
+
   const clients = Array.from({ length: 3 }, () => ({
     source: server,
     pending: [],
     replies: [],
   }));
+
   let serial = 0;
   let issued = 0;
   const place = (rows, request) =>
@@ -147,6 +157,7 @@ for (let run = 0; run < 100; run++) {
           : row,
       )
       .sort(compareCards);
+
   const view = (client) => client.pending.reduce(place, client.source);
   const issue = (client) => {
     const rows = view(client);
@@ -167,15 +178,18 @@ for (let run = 0; run < 100; run++) {
     issued++;
     operations++;
   };
+
   const process = (client) => {
     const request = client.pending.find((request) => !request.processed);
     if (!request) return;
+
     request.processed = true;
     if (random(10) === 0) failures++;
     else {
       const stable = request.witnesses.filter((w) =>
         server.some((row) => row.id === w.id && row.version === w.version),
       );
+
       server = place(server, request);
       const index = server.findIndex((row) => row.id === request.id);
       const position = cardPosition(server[index]);
@@ -186,21 +200,25 @@ for (let run = 0; run < 100; run++) {
         checks++;
       }
     }
+
     for (const other of clients)
       other.replies.push({
         rows: server,
         ack: other === client ? request.serial : undefined,
       });
   };
+
   const deliver = (client) => {
     const reply = client.replies.shift();
     if (!reply) return;
+
     client.source = reply.rows;
     if (reply.ack !== undefined)
       client.pending = client.pending.filter((request) => request.serial !== reply.ack);
     const rows = view(client);
     for (let i = 1; i < rows.length; i++) assert(compareCards(rows[i - 1], rows[i]) < 0);
   };
+
   for (let step = 0; step < 3000; step++) {
     const client = clients[random(clients.length)];
     const choice = random(4);
@@ -208,13 +226,16 @@ for (let run = 0; run < 100; run++) {
     else if (choice === 2) process(client);
     else deliver(client);
   }
+
   while (clients.some((client) => client.pending.length || client.replies.length))
     for (const client of clients) {
       process(client);
       deliver(client);
     }
+
   for (const client of clients) assert.deepEqual(view(client), server);
 }
+
 console.log(
   `PASS ordered base-64: ${intervals} suffix-safe intervals, 1,000 tight-gap insertions, ${operations} concurrent moves, ${failures} rejected requests, ${checks} stable-card order checks.`,
 );

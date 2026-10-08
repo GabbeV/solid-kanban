@@ -34,6 +34,7 @@ const metadataBoard = makeQueryBuilder(
     ),
   }).schemaType,
 ).board;
+
 const constraintBoard = makeQueryBuilder(
   schema({
     board: table(
@@ -50,11 +51,13 @@ const constraintBoard = makeQueryBuilder(
     ),
   }).schemaType,
 ).board;
+
 const initial: Row[] = [
   { id: "A", title: "One", description: "", color: "blue" },
   { id: "B", title: "Two", description: "", color: "blue" },
   { id: "C", title: "Three", description: "", color: "red" },
 ];
+
 const registrations: {
   query: ReaderSpec["query"];
   active: boolean;
@@ -62,20 +65,24 @@ const registrations: {
   applied(): void;
   error(error: Error): void;
 }[] = [];
+
 let cached: Row[] = [];
 const listeners = {
   insert: new Set<() => void>(),
   update: new Set<() => void>(),
   delete: new Set<() => void>(),
 };
+
 const refreshCache = () => {
   cached = initial.filter((row) =>
     registrations.some((entry) => {
       const where = getQueryWhereClause(entry.query);
+
       return entry.active && !entry.unsubscribed && (!where || evaluateBooleanExpr(where, row));
     }),
   );
 };
+
 const reducerCalls: { resolve(): void }[] = [];
 const acknowledgments = new Set<(ctx: unknown, row: { sequence: bigint }) => void>();
 const db = {
@@ -115,19 +122,24 @@ const db = {
     const builder = {
       onApplied(callback: typeof applied) {
         applied = callback;
+
         return builder;
       },
       onError(callback: typeof error) {
         error = callback;
+
         return builder;
       },
       subscribe(query: ReaderSpec["query"]) {
         if (getQueryAccessorName(query) === "reducerAck") {
           applied();
+
           return { isActive: () => true, unsubscribe() {} };
         }
+
         if (getQueryAccessorName(query) !== "board")
           throw new Error("Fixture supports boards only");
+
         const entry = {
           query,
           active: false,
@@ -143,26 +155,32 @@ const db = {
             error({ event: cause });
           },
         };
+
         registrations.push(entry);
+
         return {
           isActive: () => entry.active && !entry.unsubscribed,
           unsubscribe() {
             if (entry.unsubscribed) throw new Error("Double unsubscribe");
             if (!entry.active) throw new Error("Unsubscribe before applied");
+
             entry.unsubscribed = true;
             refreshCache();
           },
         };
       },
     };
+
     return builder;
   },
   disconnect() {},
 };
+
 const builder = {
   autoConnect: true,
   onConnect(callback: (next: typeof db) => void) {
     this.connect = callback;
+
     return this;
   },
   onConnectError() {
@@ -170,18 +188,21 @@ const builder = {
   },
   onDisconnect(callback: (next: typeof db, error: Error) => void) {
     this.disconnected = callback;
+
     return this;
   },
   connect: (_db: typeof db) => {},
   disconnected: (_db: typeof db, _error: Error) => {},
   build() {
     if (this.autoConnect) queueMicrotask(() => this.connect(db));
+
     return db;
   },
 };
 
 function Reader(props: ReaderSpec) {
   const rows = useTable(() => props.query);
+
   return <output id={props.id}>{JSON.stringify(rows())}</output>;
 }
 
@@ -201,6 +222,7 @@ function Harness() {
             : unique === "constraint"
               ? constraintBoard
               : tables.board;
+
         const query = predicate ? table.where(predicate) : table;
         setReaders((previous) => [...previous, { id, query }]);
       },
@@ -247,6 +269,7 @@ function Harness() {
       },
     },
   });
+
   return (
     <For each={readers()} keyed={(reader) => reader.id}>
       {(reader) => (
@@ -267,4 +290,5 @@ function App() {
     </SpacetimeDBProvider>
   );
 }
+
 render(() => <App />, document.getElementById("root")!);

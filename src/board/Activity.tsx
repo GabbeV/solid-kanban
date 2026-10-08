@@ -13,6 +13,7 @@ import { Skeleton } from "#/ui/Skeleton.tsx";
 
 export function Activity(props: ParentProps) {
   const params = useParams();
+
   return (
     <>
       <Loading on={params.boardId ?? "studio"} fallback={<ActivitySkeleton />}>
@@ -75,6 +76,7 @@ function ActivityContents() {
   const boardActivity = useTable(() =>
     tables.recentActivity.where((event) => event.boardId.eq(boardId())),
   );
+
   const activity = () =>
     [...boardActivity()].sort((a, b) => b.createdAt - a.createdAt || a.id.localeCompare(b.id));
 

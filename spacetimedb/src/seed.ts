@@ -7,6 +7,7 @@ export function seed(ctx: Ctx) {
   const crowdedCardDueDate = new Date(seededAt + 7 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
+
   ctx.db.board.insert({
     id: "studio",
     title: "A little more possible",
@@ -29,6 +30,7 @@ export function seed(ctx: Ctx) {
       }),
     );
   }
+
   const cards = [
     [
       "A calmer place to get things done",
@@ -125,6 +127,7 @@ export function seed(ctx: Ctx) {
     ["welcome-2", "Maya", "I can turn those notes into a shorter welcome flow."],
     ["welcome-6", "Sam", "The spacing scale is ready for review."],
   ];
+
   sampleComments.forEach(([cardId, author, text], i) =>
     ctx.db.comment.insert({
       id: `sample-comment-${i}`,

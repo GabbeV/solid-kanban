@@ -48,10 +48,12 @@ export type ButtonProps = ButtonStyles &
 export function Button(props: ButtonProps) {
   const [pending, setPending] = createOptimistic(false);
   const navigate = props.href === undefined ? undefined : useNavigate();
+
   const buttonClick = action(function* (
     event: Parameters<JSX.EventHandler<HTMLButtonElement, MouseEvent>>[0],
   ) {
     if (props.href !== undefined) return;
+
     setPending(true);
     const handler = props.onClick;
     const result = typeof handler === "function" ? handler(event) : handler?.[0](handler[1], event);
@@ -62,12 +64,15 @@ export function Button(props: ButtonProps) {
       event.preventDefault();
       button.form.requestSubmit(button);
     }
+
     yield result;
   });
+
   const anchorClick = action(function* (
     event: Parameters<JSX.EventHandler<HTMLAnchorElement, MouseEvent>>[0],
   ) {
     if (props.href === undefined) return;
+
     setPending(true);
     const handler = props.onClick;
     const result = typeof handler === "function" ? handler(event) : handler?.[0](handler[1], event);
@@ -98,8 +103,10 @@ export function Button(props: ButtonProps) {
         state: state ? JSON.parse(state) : undefined,
       });
     }
+
     yield result;
   });
+
   const Element = dynamic(() => (props.href === undefined ? "button" : "a"));
   const elementProps = () =>
     props.href === undefined
@@ -112,6 +119,7 @@ export function Button(props: ButtonProps) {
           ...omit(props, "variant", "pad", "font", "align", "iconOnly", "bleed", "onClick"),
           onClick: anchorClick,
         };
+
   const variant = () => props.variant ?? "default";
   const borderless = () =>
     variant() === "ghost" || variant() === "danger-ghost" || variant() === "text";

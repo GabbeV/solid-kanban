@@ -35,19 +35,23 @@ const tasks = {
     "--yes",
   ],
 };
+
 const args = tasks[process.argv[2]];
 if (!args) throw new Error("Use start, publish, or generate.");
+
 mkdirSync(resolve(root, ".spacetime"), { recursive: true });
 const child = spawn(executable, ["--root-dir", ".spacetime", ...args], {
   cwd: root,
   stdio: "inherit",
 });
+
 child.on("error", (error) => {
   console.error(
     `Could not start SpacetimeDB. Install CLI 2.10.1 or set SPACETIME_BIN. ${error.message}`,
   );
   process.exitCode = 1;
 });
+
 child.on("exit", (code) => {
   process.exitCode = code ?? 1;
 });

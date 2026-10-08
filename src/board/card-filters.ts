@@ -9,6 +9,7 @@ export function useCardFilters() {
   const hasFilters = () => Boolean(query().trim() || label());
   const matches = (card: db.Card) => {
     const text = query().trim().toLocaleLowerCase();
+
     return (
       (!label() || card.label === label()) &&
       (!text || `${card.title} ${card.description}`.toLocaleLowerCase().includes(text))

@@ -2,6 +2,7 @@ import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 
 const browser = await chromium.launch();
+
 try {
   const page = await browser.newPage();
   const errors = [];
@@ -16,6 +17,7 @@ try {
     await page.goto("http://127.0.0.1:3002/__subscriptions");
     await page.waitForFunction(() => !!window.fixture);
   };
+
   const count = () => page.evaluate(() => window.fixture.registrations.length);
   const pending = async (id) => assert.equal(await page.locator(`#${id}`).innerText(), "Pending");
   const rows = async (id, ids) => {
@@ -48,12 +50,14 @@ try {
       evaluateBooleanExpr,
       getQueryWhereClause,
     } = await import("/node_modules/.vite/deps/spacetimedb.js");
+
     let checks = 0;
     const test = (expected, query, existing) => {
       checks++;
       if (isQueryCovered(query, existing) !== expected)
         throw new Error(`Coverage check ${checks} failed`);
     };
+
     const q = (predicate) => tables.board.where(predicate);
     const A = q((r) => r.id.eq("A"));
     const B = q((r) => r.id.eq("B"));
@@ -124,6 +128,7 @@ try {
         [q((r) => r.id.eq(make(2n)))],
       );
     }
+
     // Exhaustively check every accepted proof against a finite row domain.
     const predicates = [
       tables.board,
@@ -145,15 +150,19 @@ try {
           }),
       ),
     ];
+
     const matches = (query, row) => {
       const predicate = getQueryWhereClause(query);
+
       return !predicate || evaluateBooleanExpr(predicate, row);
     };
+
     for (const query of predicates)
       for (const a of predicates)
         for (const b of predicates) {
           checks++;
           if (!isQueryCovered(query, [a, b])) continue;
+
           for (const id of ["A", "B", "C"])
             for (const color of ["blue", "red"]) {
               const row = { id, color };
@@ -161,8 +170,10 @@ try {
                 throw new Error("Unsound coverage proof");
             }
         }
+
     return checks;
   });
+
   console.log(
     `PASS: ${checks} predicate checks, including reordered terms, unions, negation, SDK literal values, and exhaustive coverage soundness.`,
   );
@@ -328,6 +339,7 @@ try {
     await page.evaluate(() => window.fixture.update("A", "No longer matches"));
     await rows("unique", []);
   }
+
   console.log(
     "PASS: non-primary unique lanes work through both lane metadata and explicit constraints, including subsequent changes to the unique value.",
   );
@@ -403,6 +415,7 @@ try {
       assert.equal(await page.evaluate(() => window.fixture.registrations[1].unsubscribed), true);
     }
   }
+
   console.log(
     "PASS: failures in a borrowed supplier or the new subscription reach already-rendered readers.",
   );

@@ -12,6 +12,7 @@ import { Notice } from "#/ui/Notice.tsx";
 export function EditNameDialog(props: { onClose: () => void }) {
   const { name, save } = useName();
   const [storageError, setStorageError] = createSignal<string>();
+
   return (
     <Dialog title="Edit name" onClose={() => props.onClose()}>
       <p
@@ -42,6 +43,7 @@ export function EditNameDialog(props: { onClose: () => void }) {
             setStorageError("Use a name of 1–32 characters.");
             return;
           }
+
           try {
             save(value);
             props.onClose();

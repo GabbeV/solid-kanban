@@ -20,18 +20,22 @@ export function positionKey(prefix: string, id: string) {
       suffix = orderDigits[Number(bits & 63n)] + suffix;
       bits >>= 6n;
     }
+
     suffix += orderDigits[1];
   } else {
     // Other IDs use three digits per UTF-16 code unit. A trailing length
     // distinguishes suffixes of different widths; the final digit
     // distinguishes these IDs from UUIDs and keeps every position nonzero.
     if (id.length >= 4096) throw new Error("Invalid ID.");
+
     for (let i = 0; i < id.length; i++) {
       const unit = id.charCodeAt(i);
       suffix += orderDigits[unit >> 12] + orderDigits[(unit >> 6) & 63] + orderDigits[unit & 63];
     }
+
     suffix += orderDigits[id.length >> 6] + orderDigits[id.length & 63] + orderDigits[2];
   }
+
   return prefix + suffix;
 }
 
@@ -45,12 +49,14 @@ export function keyBetween(left: string | undefined, right: string | undefined) 
     (left !== undefined && right !== undefined && left >= right)
   )
     throw new Error("Invalid order bounds.");
+
   let prefix = "";
   for (let i = 0; ; i++) {
     const low = orderDigits.indexOf(left?.[i] ?? orderDigits[0]);
     const high =
       right === undefined ? orderDigits.length : orderDigits.indexOf(right[i] ?? orderDigits[0]);
     if (high - low > 1) return prefix + orderDigits[Math.floor((low + high) / 2)];
+
     prefix += orderDigits[low];
     // Choosing a smaller digit leaves every extension below the upper bound.
     if (low < high) right = undefined;

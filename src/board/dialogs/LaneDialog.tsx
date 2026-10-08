@@ -16,16 +16,20 @@ import { Notice } from "#/ui/Notice.tsx";
 export function LaneDialog(props: { lane?: db.Lane; boardId: string; onClose: () => void }) {
   const reducers = useReducers();
   const { name } = useName();
+
   const [title, setTitle] = createSignal(untrack(() => props.lane?.title ?? ""));
   const [error, setError] = createSignal<string>();
   const [deleteError, setDeleteError] = createSignal<string>();
+
   const deleteLane = action(function* () {
     if (!props.lane) return;
+
     const request = {
       id: props.lane.id,
       boardId: props.boardId,
       actor: name(),
     };
+
     try {
       yield reducers.deleteLane(request);
       setDeleteError(undefined);
@@ -34,6 +38,7 @@ export function LaneDialog(props: { lane?: db.Lane; boardId: string; onClose: ()
       setDeleteError("Deletion not confirmed.");
     }
   });
+
   let newId: string | undefined;
   const addLane = action(function* (event: {
     preventDefault(): void;
@@ -48,6 +53,7 @@ export function LaneDialog(props: { lane?: db.Lane; boardId: string; onClose: ()
       title: typeof title === "string" ? title : "",
       actor: name(),
     };
+
     try {
       yield reducers.createLane(request);
       setError(undefined);
@@ -56,13 +62,16 @@ export function LaneDialog(props: { lane?: db.Lane; boardId: string; onClose: ()
       setError("Creation not confirmed.");
     }
   });
+
   const renameLane = action(function* (event: {
     preventDefault(): void;
     currentTarget: HTMLFormElement;
   }) {
     event.preventDefault();
     if (!props.lane) return;
+
     const title = new FormData(event.currentTarget).get("title");
+
     try {
       yield reducers.renameLane({
         id: props.lane.id,
@@ -76,6 +85,7 @@ export function LaneDialog(props: { lane?: db.Lane; boardId: string; onClose: ()
       setError("Changes not confirmed.");
     }
   });
+
   return (
     <Dialog title={props.lane ? "Edit lane" : "Add lane"} onClose={() => props.onClose()}>
       <form
